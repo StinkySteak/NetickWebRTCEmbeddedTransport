@@ -1,0 +1,12 @@
+{
+  "name": "com.stinkysteak.webrtctransportnetick",
+  "version": "0.1.0",
+  "displayName": "WebRTC Transport for Netick",
+  "description": "Allow developer to use WebRTC inside Netick",
+  "unity": "2021.3",
+  "author": {
+    "name": "Stinkysteak",
+    "email": "stinkysteak@steaksoft.com",
+    "url": "https://steaksoft.net"
+  }
+}
