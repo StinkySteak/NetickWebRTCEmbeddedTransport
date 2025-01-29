@@ -47,6 +47,13 @@ https://github.com/NetickNetworking/NetickForUnity
 ### Technical Design
 - This implementation of WebRTC is a little different from the others, where we run the Signaling server inside unity itself.
 
+#### Seperate Process
+![Preview](https://github.com/StinkySteak/NetickWebRTCTransport/blob/docs/tech_design_seperate.png)
+
+#### Inside Unity
+![Preview](https://github.com/StinkySteak/NetickWebRTCTransport/blob/docs/tech_design_unified.png)
+
+
 | Inside Unity                              | Seperate Process                         |
 |-------------------------------------------|------------------------------------------|
 | More in control                           | Difficult to be controlled               |
