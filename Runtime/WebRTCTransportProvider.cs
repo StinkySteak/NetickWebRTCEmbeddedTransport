@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using Netick.Transport.WebRTC;
 using Netick.Unity;
 using UnityEngine;
+using UnityEngine.XR;
 
 namespace Netick.Transport
 {
     [CreateAssetMenu(fileName = nameof(WebRTCTransportProvider), menuName = "Netick/Transport/WebRTCTransportProvider")]
     public unsafe class WebRTCTransportProvider : NetworkTransportProvider
     {
-        [SerializeField] private float _iceTricklingDuration = 0.5f;
+        [SerializeField] private float _timeoutDuration = 10f;
+
         [SerializeField]
         private string[] _iceServers = new string[]
         {
@@ -18,7 +20,10 @@ namespace Netick.Transport
 
         public override NetworkTransport MakeTransportInstance()
         {
-            return new WebRTCTransport(_iceServers, _iceTricklingDuration);
+            WebRTCTransport transport = new WebRTCTransport();
+            transport.SetConfig(_iceServers ,_timeoutDuration);
+
+            return transport;
         }
 
         public class WebRTCConnection : TransportConnection
@@ -42,13 +47,13 @@ namespace Netick.Transport
             private WebRTCNetManager _netManager;
             private BitBuffer _bitBuffer;
 
-            private float _maxIceTricklingDuration;
             private string[] _iceServers;
+            private float _connectTimeoutDuration;
 
-            public WebRTCTransport(string[] iceServers, float maxIceTricklingDuration)
+            public void SetConfig(string[] iceServers, float connectTimeoutDuration)
             {
-                _maxIceTricklingDuration = maxIceTricklingDuration;
                 _iceServers = iceServers;
+                _connectTimeoutDuration = connectTimeoutDuration;
             }
 
             public override void Init()
@@ -63,6 +68,7 @@ namespace Netick.Transport
                 _bitBuffer = new BitBuffer(createChunks: false);
 
                 _netManager.Init(Engine.Config.MaxPlayers);
+                _netManager.SetConfig(_iceServers, _connectTimeoutDuration);
             }
 
             public override void Connect(string address, int port, byte[] connectionData, int connectionDataLength)
@@ -72,13 +78,13 @@ namespace Netick.Transport
 
             public override void Disconnect(TransportConnection connection)
             {
+                WebRTCConnection webRTCConnection = (WebRTCConnection)connection;
 
+                _netManager.DisconnectPeer(webRTCConnection.Peer);
             }
 
             public override void Run(RunMode mode, int port)
             {
-                _netManager.SetConfig(_iceServers, _maxIceTricklingDuration);
-
                 if (mode == RunMode.Client)
                 {
                     _netManager.Start(mode);
@@ -120,9 +126,34 @@ namespace Netick.Transport
                 }
             }
 
-            void IWebRTCNetEventListener.OnPeerDisconnected(WebRTCPeer peer)
+            void IWebRTCNetEventListener.OnPeerDisconnected(WebRTCPeer peer, DisconnectReason disconnectReason)
             {
+                Debug.Log($"IsServer: {Engine.IsServer} OnPeerDisconnected: {peer.EndPoint} reason: {disconnectReason}");
 
+                if (Engine.IsClient)
+                {
+                    if (disconnectReason == DisconnectReason.SignalingServerUnreachable || disconnectReason == DisconnectReason.Timeout)
+                    {
+                        NetworkPeer.OnConnectFailed(ConnectionFailedReason.Timeout);
+                        return;
+                    }
+
+                    if (disconnectReason == DisconnectReason.ConnectionRejected)
+                    {
+                        NetworkPeer.OnConnectFailed(ConnectionFailedReason.Refused);
+                        return;
+                    }
+                }
+
+                if (_connections.TryGetValue(peer, out var connection))
+                {
+                    TransportDisconnectReason reason = disconnectReason == DisconnectReason.Timeout ? TransportDisconnectReason.Timeout : TransportDisconnectReason.Shutdown;
+
+                    NetworkPeer.OnDisconnected(connection, reason);
+
+                    _connections.Remove(peer);
+                    _freeClients.Enqueue(connection);
+                }
             }
         }
     }

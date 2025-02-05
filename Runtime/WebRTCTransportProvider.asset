@@ -13,5 +13,6 @@ MonoBehaviour:
   m_Name: WebRTCTransportProvider
   m_EditorClassIdentifier: 
   _iceTricklingDuration: 0.5
+  _timeoutDuration: 2
   _iceServers:
   - stun:stun.l.google.com:19302

@@ -1,6 +1,3 @@
-using Netick;
-using UnityEngine;
-
 namespace Netick.Transport.WebRTC
 {
     public class WebRTCEndPoint : IEndPoint

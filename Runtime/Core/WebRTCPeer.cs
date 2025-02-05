@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Newtonsoft.Json;
 using StinkySteak.SimulationTimer;
 using Unity.WebRTC;
@@ -10,8 +11,12 @@ namespace Netick.Transport.WebRTC
     {
         private WebSocketClientSignalingService _signalingServiceClient;
         private WebSocketSignalingServer _signalingServiceServer;
-        private float _maxIceTricklingDuration;
-        private SimulationTimer _timerTricklingIceCandidate;
+
+        private string[] _iceServers;
+        private float _timeoutDuration;
+
+        private SimulationTimer _timerTimeout;
+        private bool _hasSentReply;
 
         private RTCPeerConnection _peerConnection;
         private RunMode _peerMode;
@@ -31,16 +36,26 @@ namespace Netick.Transport.WebRTC
         private RTCDataChannel _dataChannel;
 
         private WebRTCEndPoint _endPoint = new();
-        private string[] _iceServers;
-
+        private bool _isTimedOut;
+        public bool IsTimedOut => _isTimedOut;
         public bool IsConnectionOpen => _dataChannel != null && _dataChannel.ReadyState == RTCDataChannelState.Open;
         public event Action<WebRTCPeer, byte[]> OnMessageReceived;
+        public event Action<WebRTCPeer> OnTimeout;
+        public event Action<WebRTCPeer> OnConnectionClosed;
         public WebRTCEndPoint EndPoint => _endPoint;
 
-        public void SetConfig(string[] iceServers, float maxIceTricklingDuration)
+        public RTCDataChannelState GetDataChannelState()
+        {
+            if (_dataChannel == null)
+                return RTCDataChannelState.Closed;
+
+            return _dataChannel.ReadyState;
+        }
+
+        public void SetConfig(string[] iceServers, float timeoutDuration)
         {
             _iceServers = iceServers;
-            _maxIceTricklingDuration = maxIceTricklingDuration;
+            _timeoutDuration = timeoutDuration;
         }
 
         public void Start(RunMode peerMode)
@@ -62,6 +77,8 @@ namespace Netick.Transport.WebRTC
             _signalingServiceClient.Start();
 
             _signalingServiceClient.Connect(address, port);
+
+            _timerTimeout = SimulationTimer.CreateFromSeconds(_timeoutDuration);
         }
 
         public void SetConnectionId(int id)
@@ -78,8 +95,7 @@ namespace Netick.Transport.WebRTC
         public void CloseConnection()
         {
             _peerConnection.Close();
-            _dataChannel.Close();
-            _signalingServiceServer.Stop();
+            _dataChannel?.Close();
         }
 
         private void ConstructRTCPeerConnection()
@@ -88,7 +104,7 @@ namespace Netick.Transport.WebRTC
             _peerConnection = new RTCPeerConnection(ref configuration);
             _peerConnection.OnIceCandidate = OnIceCandidate;
             _peerConnection.OnIceConnectionChange = OnIceConnectionChange;
-            _peerConnection.OnNegotiationNeeded = OnNegotiationNeeded;
+            _peerConnection.OnIceGatheringStateChange = OnIceGatheringStateChanged;
             _peerConnection.OnDataChannel = OnDataChannel;
         }
 
@@ -111,6 +127,17 @@ namespace Netick.Transport.WebRTC
         {
             if (_peerMode == RunMode.Client)
             {
+                if (_timerTimeout.IsExpired())
+                {
+                    _timerTimeout = SimulationTimer.None;
+
+                    CloseConnection();
+
+                    _isTimedOut = true;
+                    OnTimeout?.Invoke(this);
+                    return;
+                }
+
                 _signalingServiceClient?.PollUpdate();
 
                 // Client
@@ -139,7 +166,6 @@ namespace Netick.Transport.WebRTC
             {
                 Log("Answer has been set to local description!");
 
-                _timerTricklingIceCandidate = SimulationTimer.CreateFromSeconds(_maxIceTricklingDuration);
                 _opSetAnswerLocal = null;
             }
         }
@@ -180,7 +206,6 @@ namespace Netick.Transport.WebRTC
 
             if (_opSetOfferLocal.IsDone)
             {
-                _timerTricklingIceCandidate = SimulationTimer.CreateFromSeconds(_maxIceTricklingDuration);
                 Log("Offer has been set to local!");
 
                 _opSetOfferLocal = null;
@@ -216,8 +241,12 @@ namespace Netick.Transport.WebRTC
 
         private void OnClientConnectedToSignalingServer()
         {
+            RTCDataChannelInit rtcDataChannelConfig = new RTCDataChannelInit();
+            rtcDataChannelConfig.maxRetransmits = 0;
+            rtcDataChannelConfig.ordered = false;
+
             ConstructRTCPeerConnection();
-            _dataChannel = _peerConnection.CreateDataChannel("sendData");
+            _dataChannel = _peerConnection.CreateDataChannel("sendData", rtcDataChannelConfig);
             _dataChannel.OnClose = OnChannelClose;
             _dataChannel.OnOpen = OnChannelOpen;
             _dataChannel.OnMessage = OnMessage;
@@ -272,14 +301,17 @@ namespace Netick.Transport.WebRTC
 
             _endPoint.Init(ip, port);
         }
+
         private void OnChannelClose()
         {
+            OnConnectionClosed?.Invoke(this);
         }
 
         private void OnDataChannel(RTCDataChannel dataChannel)
         {
             _dataChannel = dataChannel;
             _dataChannel.OnMessage = OnMessage;
+            _dataChannel.OnClose = OnChannelClose;
 
             SDPParser.ParseSDP(_peerConnection.RemoteDescription.sdp, out string ip, out int port);
 
@@ -299,9 +331,11 @@ namespace Netick.Transport.WebRTC
 
         private void PollIceCandidate()
         {
-            if (_timerTricklingIceCandidate.IsExpired())
+            if (_hasSentReply) return;
+
+            if (_peerConnection.GatheringState == RTCIceGatheringState.Complete)
             {
-                _timerTricklingIceCandidate = SimulationTimer.None;
+                _hasSentReply = true;
 
                 if (_peerMode == RunMode.Client)
                 {
@@ -325,19 +359,22 @@ namespace Netick.Transport.WebRTC
 
         private void SendAnswerToClient()
         {
-            Log($"_handledClientId: {_connectionId}");
-
             _signalingServiceServer.SendAnswerToClient(_connectionId, _answer);
         }
 
         private void OnIceConnectionChange(RTCIceConnectionState state)
         {
             Log($"OnIceConnectionChange: {state}");
+
+            if(state == RTCIceConnectionState.Connected)
+            {
+                _timerTimeout = SimulationTimer.None;
+            }
         }
 
-        private void OnNegotiationNeeded()
+        private void OnIceGatheringStateChanged(RTCIceGatheringState state)
         {
-            Log("OnNegotiationNeeded");
+            Log($"OnIceGatheringStateChanged: {state}");
         }
     }
 }

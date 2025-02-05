@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using JamesFrowen.SimpleWeb;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace Netick.Transport.WebRTC
 {
@@ -20,6 +21,7 @@ namespace Netick.Transport.WebRTC
             _server.onError += onError;
 
             _server.Start(listenPort);
+            Debug.Log($"Signaling server has been started to listen on: {listenPort}");
         }
 
         public void PollUpdate()
@@ -72,6 +74,7 @@ namespace Netick.Transport.WebRTC
 
         private void OnConnect(int clientId)
         {
+            Debug.Log($"Signaling server: client_{clientId} is connected");
         }
     }
 }

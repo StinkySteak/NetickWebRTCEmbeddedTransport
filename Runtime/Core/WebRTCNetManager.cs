@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using Netick;
 using UnityEngine;
 
 namespace Netick.Transport.WebRTC
@@ -10,7 +9,7 @@ namespace Netick.Transport.WebRTC
         private WebSocketSignalingServer _signalingServer;
         private RunMode _runMode;
         private bool _isRunning;
-        private float _maxIceTricklingDuration;
+        private float _timeoutDuration;
 
         private List<WebRTCPeer> _candidateClients;
         private List<WebRTCPeer> _activeClients;
@@ -42,10 +41,10 @@ namespace Netick.Transport.WebRTC
             _candidateClients = new List<WebRTCPeer>(maxClients);
         }
 
-        public void SetConfig(string[] iceServers, float maxIceTricklingDuration)
+        public void SetConfig(string[] iceServers, float timeoutDuration)
         {
             _iceServers = iceServers;
-            _maxIceTricklingDuration = maxIceTricklingDuration;
+            _timeoutDuration = timeoutDuration;
         }
 
         public void Start(RunMode runMode, int port = 0)
@@ -67,25 +66,57 @@ namespace Netick.Transport.WebRTC
         {
             _serverConnectionCandidate = new WebRTCPeer();
 
-            _serverConnectionCandidate.SetConfig(_iceServers, _maxIceTricklingDuration);
+            _serverConnectionCandidate.SetConfig(_iceServers, _timeoutDuration);
             _serverConnectionCandidate.Start(RunMode.Client);
 
+            _serverConnectionCandidate.OnConnectionClosed += OnServerConnectionClosed;
             _serverConnectionCandidate.Connect(address, port);
+            _serverConnectionCandidate.OnTimeout += OnServerConnectionTimeout;
+        }
+
+        private void OnServerConnectionTimeout(WebRTCPeer serverConnection)
+        {
+            _listener.OnPeerDisconnected(_serverConnection, DisconnectReason.Timeout);
+        }
+
+        private void OnServerConnectionClosed(WebRTCPeer serverConnection)
+        {
+            _listener.OnPeerDisconnected(serverConnection, DisconnectReason.ConnectionClosed);
         }
 
         public void Stop()
         {
+            for (int i = 0; i < _activeClients.Count; i++)
+            {
+                WebRTCPeer client = _activeClients[i];
+
+                client.CloseConnection();
+            }
+
+            for (int i = 0; i < _candidateClients.Count; i++)
+            {
+                WebRTCPeer client = _candidateClients[i];
+
+                client.CloseConnection();
+            }
+
+            _activeClients.Clear();
+            _candidateClients.Clear();
+
             if (_signalingServer != null)
                 _signalingServer.Stop();
         }
 
+        public void DisconnectPeer(WebRTCPeer peer)
+        {
+            peer.CloseConnection();
+        }
+
         private void OnClientOffered(int clientId, string offer)
         {
-            Debug.Log("OnClientOffered");
-
             WebRTCPeer candidatePeer = new();
 
-            candidatePeer.SetConfig(_iceServers, _maxIceTricklingDuration);
+            candidatePeer.SetConfig(_iceServers, _timeoutDuration);
             candidatePeer.SetSignalingServer(_signalingServer);
             candidatePeer.Start(RunMode.Server);
 
@@ -95,7 +126,6 @@ namespace Netick.Transport.WebRTC
             candidatePeer.OnMessageReceived += OnMessageReceived;
 
             _candidateClients.Add(candidatePeer);
-            _activeClients.Add(candidatePeer);
         }
 
         private void OnMessageReceived(WebRTCPeer peer, byte[] bytes)
@@ -113,10 +143,27 @@ namespace Netick.Transport.WebRTC
 
                 candidateClient.TriggerUpdate();
 
+                if (candidateClient.IsTimedOut)
+                {
+                    _candidateClients.RemoveAt(i);
+                }
+
                 if (candidateClient.IsConnectionOpen)
                 {
                     _candidateClients.RemoveAt(i);
+                    _activeClients.Add(candidateClient);
                     _listener.OnPeerConnected(candidateClient);
+                }
+            }
+
+            for (int i = _activeClients.Count - 1; i >= 0; i--)
+            {
+                WebRTCPeer activeClient = _activeClients[i];
+
+                if (!activeClient.IsConnectionOpen)
+                {
+                    _activeClients.RemoveAt(i);
+                    _listener.OnPeerDisconnected(activeClient, DisconnectReason.ConnectionClosed);
                 }
             }
 
@@ -146,10 +193,12 @@ namespace Netick.Transport.WebRTC
         }
     }
 
-    public interface IWebRTCNetEventListener
+    public enum DisconnectReason
     {
-        void OnPeerConnected(WebRTCPeer peer);
-        void OnPeerDisconnected(WebRTCPeer peer);
-        void OnNetworkReceive(WebRTCPeer peer, byte[] bytes);
+        SignalingServerUnreachable,
+        Timeout,
+        ConnectionRejected,
+        Shutdown,
+        ConnectionClosed
     }
 }

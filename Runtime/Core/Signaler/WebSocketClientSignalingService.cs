@@ -23,9 +23,14 @@ namespace Netick.Transport.WebRTC
             _webClient = SimpleWebClient.Create(ushort.MaxValue, 5000, tcpConfig);
 
             _webClient.onConnect += OnWebsocketConnected;
-            _webClient.onDisconnect += () => Debug.Log($"Disconnected from Server");
+            _webClient.onDisconnect += OnDisconnected;
             _webClient.onData += OnWebsocketData;
             _webClient.onError += (exception) => Debug.Log($"Error because of Server, Error:{exception}");
+        }
+
+        private void OnDisconnected()
+        {
+            Debug.Log($"Disconnected from signaling server");
         }
 
         public void Connect(string url, int port)
@@ -42,6 +47,7 @@ namespace Netick.Transport.WebRTC
 
         private void OnWebsocketConnected()
         {
+            Debug.Log($"Connected to signaling server");
             OnConnectedToServer?.Invoke();
         }
 
@@ -70,6 +76,9 @@ namespace Netick.Transport.WebRTC
                 int myId = message.To;
 
                 OnServerAnswered?.Invoke(myId, answer);
+
+                Debug.Log($"Signaling Client: disconnecting...");
+
                 _webClient.Disconnect();
             }
         }
