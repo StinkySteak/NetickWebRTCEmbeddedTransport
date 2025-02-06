@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using Netick.Transport.WebRTC;
 using Netick.Unity;
 using UnityEngine;
-using UnityEngine.XR;
 
 namespace Netick.Transport
 {
@@ -11,24 +10,27 @@ namespace Netick.Transport
     public unsafe class WebRTCTransportProvider : NetworkTransportProvider
     {
         [SerializeField] private float _timeoutDuration = 10f;
+        [SerializeField] private string[] _iceServers;
 
-        [SerializeField]
-        private string[] _iceServers = new string[]
+        private void Reset()
         {
-            "stun:stun.l.google.com:19302"
-        };
+            _iceServers = new string[]
+            {
+                "stun:stun.l.google.com:19302"
+            };
+        }
 
         public override NetworkTransport MakeTransportInstance()
         {
-            WebRTCTransport transport = new WebRTCTransport();
-            transport.SetConfig(_iceServers ,_timeoutDuration);
+            WebRTCTransport transport = new();
+            transport.SetConfig(_iceServers, _timeoutDuration);
 
             return transport;
         }
 
         public class WebRTCConnection : TransportConnection
         {
-            public WebRTCPeer Peer;
+            public BaseWebRTCPeer Peer;
 
             public override IEndPoint EndPoint => Peer.EndPoint;
 
@@ -42,7 +44,7 @@ namespace Netick.Transport
 
         public unsafe class WebRTCTransport : NetworkTransport, IWebRTCNetEventListener
         {
-            private Dictionary<WebRTCPeer, WebRTCConnection> _connections;
+            private Dictionary<BaseWebRTCPeer, WebRTCConnection> _connections;
             private Queue<WebRTCConnection> _freeClients;
             private WebRTCNetManager _netManager;
             private BitBuffer _bitBuffer;
@@ -105,7 +107,7 @@ namespace Netick.Transport
                 _netManager.PollUpdate();
             }
 
-            void IWebRTCNetEventListener.OnPeerConnected(WebRTCPeer peer)
+            void IWebRTCNetEventListener.OnPeerConnected(BaseWebRTCPeer peer)
             {
                 WebRTCConnection connection = _freeClients.Dequeue();
                 connection.Peer = peer;
@@ -114,7 +116,7 @@ namespace Netick.Transport
                 NetworkPeer.OnConnected(connection);
             }
 
-            void IWebRTCNetEventListener.OnNetworkReceive(WebRTCPeer peer, byte[] bytes)
+            void IWebRTCNetEventListener.OnNetworkReceive(BaseWebRTCPeer peer, byte[] bytes)
             {
                 if (_connections.TryGetValue(peer, out var connection))
                 {
@@ -126,7 +128,16 @@ namespace Netick.Transport
                 }
             }
 
-            void IWebRTCNetEventListener.OnPeerDisconnected(WebRTCPeer peer, DisconnectReason disconnectReason)
+            void IWebRTCNetEventListener.OnMessageReceiveUnmanaged(BaseWebRTCPeer peer, IntPtr ptr, int length)
+            {
+                if (_connections.TryGetValue(peer, out var connection))
+                {
+                    _bitBuffer.SetFrom((byte*)ptr, length, length);
+                    NetworkPeer.Receive(connection, _bitBuffer);
+                }
+            }
+
+            void IWebRTCNetEventListener.OnPeerDisconnected(BaseWebRTCPeer peer, DisconnectReason disconnectReason)
             {
                 Debug.Log($"IsServer: {Engine.IsServer} OnPeerDisconnected: {peer.EndPoint} reason: {disconnectReason}");
 

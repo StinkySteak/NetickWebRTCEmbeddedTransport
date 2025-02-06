@@ -1,5 +1,5 @@
+using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace Netick.Transport.WebRTC
 {
@@ -11,11 +11,11 @@ namespace Netick.Transport.WebRTC
         private bool _isRunning;
         private float _timeoutDuration;
 
-        private List<WebRTCPeer> _candidateClients;
-        private List<WebRTCPeer> _activeClients;
+        private List<BaseWebRTCPeer> _candidateClients;
+        private List<BaseWebRTCPeer> _activeClients;
 
-        private WebRTCPeer _serverConnectionCandidate;
-        private WebRTCPeer _serverConnection;
+        private BaseWebRTCPeer _serverConnectionCandidate;
+        private BaseWebRTCPeer _serverConnection;
         private string[] _iceServers;
 
         public WebRTCNetManager(IWebRTCNetEventListener listener)
@@ -23,9 +23,10 @@ namespace Netick.Transport.WebRTC
             _listener = listener;
         }
 
-        public void AddPeer(WebRTCPeer peer)
+        public void AddPeer(BaseWebRTCPeer peer)
         {
             peer.OnMessageReceived += OnMessageReceived;
+            peer.OnMessageReceivedUnmanaged += OnMessageReceivedUnmanaged;
 
             _activeClients.Add(peer);
         }
@@ -37,8 +38,8 @@ namespace Netick.Transport.WebRTC
 
         public void Init(int maxClients)
         {
-            _activeClients = new List<WebRTCPeer>(maxClients);
-            _candidateClients = new List<WebRTCPeer>(maxClients);
+            _activeClients = new List<BaseWebRTCPeer>(maxClients);
+            _candidateClients = new List<BaseWebRTCPeer>(maxClients);
         }
 
         public void SetConfig(string[] iceServers, float timeoutDuration)
@@ -64,7 +65,7 @@ namespace Netick.Transport.WebRTC
 
         public void Connect(string address, int port)
         {
-            _serverConnectionCandidate = new WebRTCPeer();
+            _serverConnectionCandidate = ConstructWebRTCPeer();
 
             _serverConnectionCandidate.SetConfig(_iceServers, _timeoutDuration);
             _serverConnectionCandidate.Start(RunMode.Client);
@@ -74,12 +75,21 @@ namespace Netick.Transport.WebRTC
             _serverConnectionCandidate.OnTimeout += OnServerConnectionTimeout;
         }
 
-        private void OnServerConnectionTimeout(WebRTCPeer serverConnection)
+        private BaseWebRTCPeer ConstructWebRTCPeer()
+        {
+#if UNITY_WEBGL && !UNITY_EDITOR
+            return new BrowserWebRTCPeer();
+#else
+            return new NativeWebRTCPeer();
+#endif
+        }
+
+        private void OnServerConnectionTimeout(BaseWebRTCPeer serverConnection)
         {
             _listener.OnPeerDisconnected(_serverConnection, DisconnectReason.Timeout);
         }
 
-        private void OnServerConnectionClosed(WebRTCPeer serverConnection)
+        private void OnServerConnectionClosed(BaseWebRTCPeer serverConnection)
         {
             _listener.OnPeerDisconnected(serverConnection, DisconnectReason.ConnectionClosed);
         }
@@ -88,14 +98,14 @@ namespace Netick.Transport.WebRTC
         {
             for (int i = 0; i < _activeClients.Count; i++)
             {
-                WebRTCPeer client = _activeClients[i];
+                BaseWebRTCPeer client = _activeClients[i];
 
                 client.CloseConnection();
             }
 
             for (int i = 0; i < _candidateClients.Count; i++)
             {
-                WebRTCPeer client = _candidateClients[i];
+                BaseWebRTCPeer client = _candidateClients[i];
 
                 client.CloseConnection();
             }
@@ -107,30 +117,36 @@ namespace Netick.Transport.WebRTC
                 _signalingServer.Stop();
         }
 
-        public void DisconnectPeer(WebRTCPeer peer)
+        public void DisconnectPeer(BaseWebRTCPeer peer)
         {
             peer.CloseConnection();
         }
 
         private void OnClientOffered(int clientId, string offer)
         {
-            WebRTCPeer candidatePeer = new();
+            NativeWebRTCPeer candidatePeer = new NativeWebRTCPeer();
 
             candidatePeer.SetConfig(_iceServers, _timeoutDuration);
             candidatePeer.SetSignalingServer(_signalingServer);
             candidatePeer.Start(RunMode.Server);
 
-            candidatePeer.OnClientOffered(offer);
+            candidatePeer.OnReceivedOfferFromClient(offer);
             candidatePeer.SetConnectionId(clientId);
 
             candidatePeer.OnMessageReceived += OnMessageReceived;
+            candidatePeer.OnMessageReceivedUnmanaged += OnMessageReceivedUnmanaged;
 
             _candidateClients.Add(candidatePeer);
         }
 
-        private void OnMessageReceived(WebRTCPeer peer, byte[] bytes)
+        private void OnMessageReceived(BaseWebRTCPeer peer, byte[] bytes)
         {
             _listener.OnNetworkReceive(peer, bytes);
+        }
+
+        private void OnMessageReceivedUnmanaged(BaseWebRTCPeer peer, IntPtr ptr, int length)
+        {
+            _listener.OnMessageReceiveUnmanaged(peer, ptr, length);
         }
 
         public void PollUpdate()
@@ -139,9 +155,9 @@ namespace Netick.Transport.WebRTC
 
             for (int i = _candidateClients.Count - 1; i >= 0; i--)
             {
-                WebRTCPeer candidateClient = _candidateClients[i];
+                BaseWebRTCPeer candidateClient = _candidateClients[i];
 
-                candidateClient.TriggerUpdate();
+                candidateClient.PollUpdate();
 
                 if (candidateClient.IsTimedOut)
                 {
@@ -158,7 +174,7 @@ namespace Netick.Transport.WebRTC
 
             for (int i = _activeClients.Count - 1; i >= 0; i--)
             {
-                WebRTCPeer activeClient = _activeClients[i];
+                BaseWebRTCPeer activeClient = _activeClients[i];
 
                 if (!activeClient.IsConnectionOpen)
                 {
@@ -175,11 +191,11 @@ namespace Netick.Transport.WebRTC
             if (_runMode == RunMode.Client)
             {
                 if (_serverConnection != null)
-                    _serverConnection.TriggerUpdate();
+                    _serverConnection.PollUpdate();
 
                 if (_serverConnectionCandidate != null)
                 {
-                    _serverConnectionCandidate.TriggerUpdate();
+                    _serverConnectionCandidate.PollUpdate();
 
                     if (_serverConnectionCandidate.IsConnectionOpen)
                     {

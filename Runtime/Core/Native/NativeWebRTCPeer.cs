@@ -1,14 +1,49 @@
+#if UNITY_WEBGL && !UNITY_EDITOR
+#define BROWSER
+#endif
+
+#if !BROWSER
+using Unity.WebRTC;
+#endif
+
 using System;
-using System.Threading;
 using Newtonsoft.Json;
 using StinkySteak.SimulationTimer;
-using Unity.WebRTC;
 using UnityEngine;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace Netick.Transport.WebRTC
 {
-    public class WebRTCPeer
+    public class NativeWebRTCPeer : BaseWebRTCPeer
     {
+#if BROWSER
+
+        public override IEndPoint EndPoint => throw new NotImplementedException();
+
+        public override bool IsConnectionOpen => false;
+
+        public override bool IsTimedOut => false;
+
+        public override void CloseConnection() { }
+
+        public override void Connect(string address, int port) { }
+
+        public override void OnReceivedOfferFromClient(string offer) { }
+
+        public override void PollUpdate() { }
+
+        public override void Send(IntPtr ptr, int length) { }
+
+        public override void SetConfig(string[] iceServers, float timeoutDuration) { }
+
+        public override void SetConnectionId(int id) { }
+
+        public override void SetSignalingServer(WebSocketSignalingServer signalingServer) { }
+
+        public override void Start(RunMode runMode) { }
+#else
+
         private WebSocketClientSignalingService _signalingServiceClient;
         private WebSocketSignalingServer _signalingServiceServer;
 
@@ -37,12 +72,15 @@ namespace Netick.Transport.WebRTC
 
         private WebRTCEndPoint _endPoint = new();
         private bool _isTimedOut;
-        public bool IsTimedOut => _isTimedOut;
-        public bool IsConnectionOpen => _dataChannel != null && _dataChannel.ReadyState == RTCDataChannelState.Open;
-        public event Action<WebRTCPeer, byte[]> OnMessageReceived;
-        public event Action<WebRTCPeer> OnTimeout;
-        public event Action<WebRTCPeer> OnConnectionClosed;
-        public WebRTCEndPoint EndPoint => _endPoint;
+
+        private StringEnumConverter _jsonSettings = new StringEnumConverter()
+        {
+            NamingStrategy = new CamelCaseNamingStrategy()
+        };
+
+        public override bool IsTimedOut => _isTimedOut;
+        public override bool IsConnectionOpen => _dataChannel != null && _dataChannel.ReadyState == RTCDataChannelState.Open;
+        public override IEndPoint EndPoint => _endPoint;
 
         public RTCDataChannelState GetDataChannelState()
         {
@@ -52,24 +90,27 @@ namespace Netick.Transport.WebRTC
             return _dataChannel.ReadyState;
         }
 
-        public void SetConfig(string[] iceServers, float timeoutDuration)
+        public override void SetConfig(string[] iceServers, float timeoutDuration)
         {
             _iceServers = iceServers;
             _timeoutDuration = timeoutDuration;
         }
 
-        public void Start(RunMode peerMode)
+        public override void Start(RunMode peerMode)
         {
             _peerMode = peerMode;
-            _signalingServiceClient = new WebSocketClientSignalingService();
 
             if (peerMode == RunMode.Server)
             {
                 ConstructRTCPeerConnection();
             }
+            else if (peerMode == RunMode.Client)
+            {
+                _signalingServiceClient = new WebSocketClientSignalingService();
+            }
         }
 
-        public void Connect(string address, int port)
+        public override void Connect(string address, int port)
         {
             Log("Starting as Client");
 
@@ -81,18 +122,18 @@ namespace Netick.Transport.WebRTC
             _timerTimeout = SimulationTimer.CreateFromSeconds(_timeoutDuration);
         }
 
-        public void SetConnectionId(int id)
+        public override void SetConnectionId(int id)
         {
             _connectionId = id;
         }
 
-        public void SetSignalingServer(WebSocketSignalingServer signalingServerClient)
+        public override void SetSignalingServer(WebSocketSignalingServer signalingServerClient)
         {
             _signalingServiceServer = signalingServerClient;
         }
 
 
-        public void CloseConnection()
+        public override void CloseConnection()
         {
             _peerConnection.Close();
             _dataChannel?.Close();
@@ -108,11 +149,6 @@ namespace Netick.Transport.WebRTC
             _peerConnection.OnDataChannel = OnDataChannel;
         }
 
-        public void TriggerUpdate()
-        {
-            PollUpdate();
-        }
-
         private void Log(string msg)
         {
             Debug.Log($"[{this}]: {msg}");
@@ -123,7 +159,7 @@ namespace Netick.Transport.WebRTC
             Debug.LogError($"[{this}]: {msg}");
         }
 
-        private void PollUpdate()
+        public override void PollUpdate()
         {
             if (_peerMode == RunMode.Client)
             {
@@ -134,11 +170,10 @@ namespace Netick.Transport.WebRTC
                     CloseConnection();
 
                     _isTimedOut = true;
-                    OnTimeout?.Invoke(this);
                     return;
                 }
 
-                _signalingServiceClient?.PollUpdate();
+                _signalingServiceClient.PollUpdate();
 
                 // Client
                 PollOpCreateOffer();
@@ -255,11 +290,11 @@ namespace Netick.Transport.WebRTC
             _opCreateOffer = _peerConnection.CreateOffer();
         }
 
-        public void OnClientOffered(string offer)
+        public override void OnReceivedOfferFromClient(string offer)
         {
             Log("Getting an offer from a client. Creating an answer...");
 
-            RTCSessionDescription sdpOffer = JsonConvert.DeserializeObject<RTCSessionDescription>(offer);
+            RTCSessionDescription sdpOffer = JsonConvert.DeserializeObject<RTCSessionDescription>(offer, _jsonSettings);
 
             _opSetOfferRemote = _peerConnection.SetRemoteDescription(ref sdpOffer);
         }
@@ -275,7 +310,7 @@ namespace Netick.Transport.WebRTC
         {
             _connectionId = clientId;
 
-            RTCSessionDescription sdp = JsonConvert.DeserializeObject<RTCSessionDescription>(message);
+            RTCSessionDescription sdp = JsonConvert.DeserializeObject<RTCSessionDescription>(message, _jsonSettings);
             _opSetAnswerRemote = _peerConnection.SetRemoteDescription(ref sdp);
         }
 
@@ -304,7 +339,7 @@ namespace Netick.Transport.WebRTC
 
         private void OnChannelClose()
         {
-            OnConnectionClosed?.Invoke(this);
+            BroadcastOnConnectionClosed();
         }
 
         private void OnDataChannel(RTCDataChannel dataChannel)
@@ -321,10 +356,10 @@ namespace Netick.Transport.WebRTC
 
         private void OnMessage(byte[] bytes)
         {
-            OnMessageReceived?.Invoke(this, bytes);
+            BroadcastOnMessage(bytes);
         }
 
-        public void Send(IntPtr ptr, int length)
+        public override void Send(IntPtr ptr, int length)
         {
             _dataChannel.Send(ptr, length);
         }
@@ -333,6 +368,8 @@ namespace Netick.Transport.WebRTC
         {
             if (_hasSentReply) return;
 
+            if (_peerConnection == null) return;
+
             if (_peerConnection.GatheringState == RTCIceGatheringState.Complete)
             {
                 _hasSentReply = true;
@@ -340,13 +377,14 @@ namespace Netick.Transport.WebRTC
                 if (_peerMode == RunMode.Client)
                 {
                     Log("Sending offer to the server...");
-                    _offer = JsonConvert.SerializeObject(_peerConnection.LocalDescription);
+                    _offer = JsonConvert.SerializeObject(_peerConnection.LocalDescription, _jsonSettings);
                     SendOfferToServer();
                 }
                 if (_peerMode == RunMode.Server)
                 {
                     Log("Sending answer to the client...");
-                    _answer = JsonConvert.SerializeObject(_peerConnection.LocalDescription);
+                    _answer = JsonConvert.SerializeObject(_peerConnection.LocalDescription, _jsonSettings);
+                    Debug.Log($"_answer: {_answer}");
                     SendAnswerToClient();
                 }
             }
@@ -376,5 +414,6 @@ namespace Netick.Transport.WebRTC
         {
             Log($"OnIceGatheringStateChanged: {state}");
         }
+#endif
     }
 }
