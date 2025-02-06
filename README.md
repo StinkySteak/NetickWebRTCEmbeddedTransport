@@ -1,6 +1,6 @@
 ## Overview
 
-Utilizing WebRTC as a transport for Netick.
+Utilizing WebRTC as a transport for Netick. Allowing Developers to Utilize DTLS (Secure UDP) for WebGL and Native platform!
 
 If you are new to WebRTC, check out the resources section down below
 
