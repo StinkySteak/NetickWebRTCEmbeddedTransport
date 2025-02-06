@@ -6,11 +6,12 @@ If you are new to WebRTC, check out the resources section down below
 
 ### Features
 
-| Feature                 | Description               | Status      |
-|-------------------------|---------------------------|-------------|
-| Native Platform Support | Based on the Unity WebRTC | Preview     |
-| WebGL Support           |                           | Coming Soon |
-| Connection Payload      |                           | Coming Soon |
+| Feature                 | Description                                  | Status       |
+|-------------------------|----------------------------------------------|--------------|
+| Native Support          | Based on the Unity WebRTC supported platform | Experimental |
+| WebGL Support           | WebGL acting as a client                     | Experimental |
+| Connection Payload      |                                              | Coming Soon  |
+| WebGL Multipeer Support |                                              | Coming Soon  |
 
 ## Installation
 
@@ -35,13 +36,13 @@ https://github.com/NetickNetworking/NetickForUnity
 - Click the plus icon.
 - Select Add package from git URL
 - Enter https://github.com/StinkySteak/NetickMultiplexTransport.git
-- You can then create an instance by by double clicking in the Assets folder and going to `Create > Netick > Transport > MultiplexTransportProvider`
+- You can then create an instance by double clicking in the Assets folder and going to `Create > Netick > Transport > NetickWebRTCTransport`
 
 ### How to Use?
 
 | API                    | Description                                                                                            |
 |------------------------|--------------------------------------------------------------------------------------------------------|
-| Ice Trickling Duration | Define how long the local peer gather ice candidates after they set offer/answer for local description |
+| Timeout Duration | Define how long timeout will be called upon failed to connect |
 | ICE Servers            | URLs of your STUN/TURN servers                                                                         |
 
 ### Technical Design
