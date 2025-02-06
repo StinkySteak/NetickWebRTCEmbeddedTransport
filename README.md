@@ -6,12 +6,10 @@ If you are new to WebRTC, check out the resources section down below
 
 ### Features
 
-| Feature                 | Description                                  | Status       |
-|-------------------------|----------------------------------------------|--------------|
-| Native Support          | Based on the Unity WebRTC supported platform | Experimental |
-| WebGL Support           | WebGL acting as a client                     | Experimental |
-| Connection Payload      |                                              | Coming Soon  |
-| WebGL Multipeer Support |                                              | Coming Soon  |
+| Feature        | Description                                  | Status       |
+|----------------|----------------------------------------------|--------------|
+| Native Support | Based on the Unity WebRTC supported platform | Experimental |
+| WebGL Support  | WebGL acting as a client                     | Experimental |
 
 ## Installation
 
