@@ -1,7 +1,5 @@
 using System;
 using AOT;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json.Serialization;
 using StinkySteak.SimulationTimer;
 using StinkySteak.WebRealtimeCommunication;
 using UnityEngine;
@@ -12,28 +10,25 @@ namespace Netick.Transport.WebRTC
     {
         private static BrowserWebRTCPeer Instance { get; set; }
 
+        private WebSocketSignalingServer _signalingServiceServer;
         private WebSocketClientSignalingService _signalingServiceClient;
         private WebRTCEndPoint _endPoint = new();
 
+        private int _connectionId;
         private string _offer;
         private string _answer;
-
         private RunMode _peerMode;
-
-        private string[] _iceServers;
-        private float _timeoutDuration;
-
-        public override IEndPoint EndPoint => _endPoint;
-
+        private bool _hasSentIceGatheringComplete;
         private bool _isTimedOut;
-        public override bool IsConnectionOpen => Browser.WebRTC_IsConnectionOpen();
-        public override bool IsTimedOut => _isTimedOut;
 
         private SimulationTimer _timerTimeout;
+        private SimulationTimer _timerIceTrickling;
 
-        private bool _sentIceGatheringComplete;
-        private int _connectionId;
-        private WebSocketSignalingServer _signalingServiceServer;
+        private UserRTCConfig _userRTCConfig;
+        
+        public override IEndPoint EndPoint => _endPoint;
+        public override bool IsConnectionOpen => Browser.WebRTC_IsConnectionOpen();
+        public override bool IsTimedOut => _isTimedOut;
 
         public override void Start(RunMode runMode)
         {
@@ -50,11 +45,6 @@ namespace Netick.Transport.WebRTC
                 _signalingServiceClient = new WebSocketClientSignalingService();
             }
         }
-
-        private StringEnumConverter _jsonSettings = new StringEnumConverter()
-        {
-            NamingStrategy = new CamelCaseNamingStrategy()
-        };
 
         private void ConstructRTCPeerConnection()
         {
@@ -89,6 +79,8 @@ namespace Netick.Transport.WebRTC
         [MonoPInvokeCallback(typeof(OnChannelOpen))]
         private static void OnChannelOpen()
         {
+            Instance._timerTimeout = SimulationTimer.None;
+
             string remoteDescription = Browser.WebRTC_GetRemoteDescription();
 
             SDPParser.ParseSDP(remoteDescription, out string ip, out int port);
@@ -99,7 +91,7 @@ namespace Netick.Transport.WebRTC
         [MonoPInvokeCallback(typeof(OnDataChannel))]
         private static void OnDataChannel()
         {
-            Instance.Log("OnIceConnectionChanged");
+            Instance.Log("OnDataChannel");
 
             string remoteDescription = Browser.WebRTC_GetRemoteDescription();
 
@@ -154,6 +146,9 @@ namespace Netick.Transport.WebRTC
             {
                 Log("Answer has been set to local description!");
 
+                if (_userRTCConfig.IceTricklingConfig.IsManual)
+                    _timerIceTrickling = SimulationTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
+
                 Browser.WebRTC_DisposeOpSetLocalDescription();
             }
         }
@@ -201,6 +196,9 @@ namespace Netick.Transport.WebRTC
             {
                 Log("Offer has been set to local!");
 
+                if (_userRTCConfig.IceTricklingConfig.IsManual)
+                    _timerIceTrickling = SimulationTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
+
                 Browser.WebRTC_DisposeOpSetLocalDescription();
             }
         }
@@ -236,11 +234,12 @@ namespace Netick.Transport.WebRTC
         {
             if (!Browser.WebRTC_GetIsPeerConnectionCreated()) return;
 
-            if (_sentIceGatheringComplete) return;
+            if (_hasSentIceGatheringComplete) return;
 
-            if (Browser.WebRTC_GetGatheringState() == BrowserRTCIceGatheringState.Complete)
+            if (Browser.WebRTC_GetGatheringState() == BrowserRTCIceGatheringState.Complete || _timerIceTrickling.IsExpired())
             {
-                _sentIceGatheringComplete = true;
+                _timerIceTrickling = SimulationTimer.None;
+                _hasSentIceGatheringComplete = true;
 
                 if (_peerMode == RunMode.Client)
                 {
@@ -273,15 +272,12 @@ namespace Netick.Transport.WebRTC
         {
             _connectionId = clientId;
 
-            //BrowserRTCSessionDescription sdp = JsonConvert.DeserializeObject<BrowserRTCSessionDescription>(message, _jsonSettings);
-
             Browser.WebRTC_SetRemoteDescription(message);
         }
 
-        public override void SetConfig(string[] iceServers, float timeoutDuration)
+        public override void SetConfig(UserRTCConfig userRTCConfig)
         {
-            _iceServers = iceServers;
-            _timeoutDuration = timeoutDuration;
+            _userRTCConfig = userRTCConfig;
         }
 
         public override void Connect(string address, int port)
@@ -291,7 +287,7 @@ namespace Netick.Transport.WebRTC
 
             _signalingServiceClient.Connect(address, port);
 
-            _timerTimeout = SimulationTimer.CreateFromSeconds(_timeoutDuration);
+            _timerTimeout = SimulationTimer.CreateFromSeconds(_userRTCConfig.TimeoutDuration);
         }
 
         private void OnConnectedToServer()
@@ -304,12 +300,11 @@ namespace Netick.Transport.WebRTC
             Browser.WebRTC_CreateOffer();
         }
 
-
         private BrowserRTCConfiguration GetSelectedSdpSemantics()
         {
             BrowserRTCIceServer iceServer = new()
             {
-                urls = _iceServers,
+                urls = _userRTCConfig.IceServers,
             };
 
             BrowserRTCConfiguration config = default;

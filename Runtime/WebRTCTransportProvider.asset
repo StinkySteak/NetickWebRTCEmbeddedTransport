@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6eed33514c50cbe4897b3421a23a1978, type: 3}
   m_Name: WebRTCTransportProvider
   m_EditorClassIdentifier: 
-  _iceTricklingDuration: 0.5
-  _timeoutDuration: 2
   _iceServers:
   - stun:stun.l.google.com:19302
+  _timeoutDuration: 10
+  _iceTricklingConfig:
+    IsManual: 1
+    Duration: 0.5

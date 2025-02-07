@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JamesFrowen.SimpleWeb;
 
 namespace Netick.Transport.WebRTC
 {
@@ -9,14 +10,13 @@ namespace Netick.Transport.WebRTC
         private WebSocketSignalingServer _signalingServer;
         private RunMode _runMode;
         private bool _isRunning;
-        private float _timeoutDuration;
 
         private List<BaseWebRTCPeer> _candidateClients;
         private List<BaseWebRTCPeer> _activeClients;
 
         private BaseWebRTCPeer _serverConnectionCandidate;
         private BaseWebRTCPeer _serverConnection;
-        private string[] _iceServers;
+        private UserRTCConfig _userRTCConfig;
 
         public WebRTCNetManager(IWebRTCNetEventListener listener)
         {
@@ -42,10 +42,9 @@ namespace Netick.Transport.WebRTC
             _candidateClients = new List<BaseWebRTCPeer>(maxClients);
         }
 
-        public void SetConfig(string[] iceServers, float timeoutDuration)
+        public void SetConfig(UserRTCConfig userRTCConfig)
         {
-            _iceServers = iceServers;
-            _timeoutDuration = timeoutDuration;
+            _userRTCConfig = userRTCConfig;
         }
 
         public void Start(RunMode runMode, int port = 0)
@@ -67,7 +66,7 @@ namespace Netick.Transport.WebRTC
         {
             _serverConnectionCandidate = ConstructWebRTCPeer();
 
-            _serverConnectionCandidate.SetConfig(_iceServers, _timeoutDuration);
+            _serverConnectionCandidate.SetConfig(_userRTCConfig);
             _serverConnectionCandidate.Start(RunMode.Client);
 
             _serverConnectionCandidate.OnConnectionClosed += OnServerConnectionClosed;
@@ -126,7 +125,7 @@ namespace Netick.Transport.WebRTC
         {
             NativeWebRTCPeer candidatePeer = new NativeWebRTCPeer();
 
-            candidatePeer.SetConfig(_iceServers, _timeoutDuration);
+            candidatePeer.SetConfig(_userRTCConfig);
             candidatePeer.SetSignalingServer(_signalingServer);
             candidatePeer.Start(RunMode.Server);
 

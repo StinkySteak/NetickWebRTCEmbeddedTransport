@@ -10,6 +10,9 @@ namespace Netick.Transport.WebRTC
     {
         private SimpleWebServer _server;
 
+        public event Action<int> OnClientDisconnected;
+        public event Action<int, string> OnClientOffered;
+
         public void Start(ushort listenPort)
         {
             TcpConfig tcpConfig = new(noDelay: true, sendTimeout: 5_000, receiveTimeout: 20_000);
@@ -17,8 +20,8 @@ namespace Netick.Transport.WebRTC
 
             _server.onConnect += OnConnect;
             _server.onData += OnData;
-            _server.onDisconnect += onDisconnect;
-            _server.onError += onError;
+            _server.onDisconnect += OnDisconnect;
+            _server.onError += OnError;
 
             _server.Start(listenPort);
             Debug.Log($"Signaling server has been started to listen on: {listenPort}");
@@ -34,17 +37,14 @@ namespace Netick.Transport.WebRTC
             _server.Stop();
         }
 
-        private void onError(int clientId, Exception exception)
+        private void OnError(int clientId, Exception exception)
         {
         }
 
-        private void onDisconnect(int clientId)
+        private void OnDisconnect(int clientId)
         {
             OnClientDisconnected?.Invoke(clientId);
         }
-
-        public event Action<int> OnClientDisconnected;
-        public event Action<int, string> OnClientOffered;
 
         public void SendAnswerToClient(int clientId, string answer)
         {

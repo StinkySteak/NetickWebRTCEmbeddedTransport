@@ -11,6 +11,7 @@ namespace Netick.Transport.WebRTC
 
         public event Action<int, string> OnServerAnswered;
         public event Action OnConnectedToServer;
+        public event Action OnDisconnectedFromServer;
 
         public void PollUpdate()
         {
@@ -30,6 +31,7 @@ namespace Netick.Transport.WebRTC
 
         private void OnDisconnected()
         {
+            OnDisconnectedFromServer?.Invoke();
             Debug.Log($"Disconnected from signaling server");
         }
 

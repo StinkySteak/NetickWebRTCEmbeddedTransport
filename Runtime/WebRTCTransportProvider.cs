@@ -9,8 +9,10 @@ namespace Netick.Transport
     [CreateAssetMenu(fileName = nameof(WebRTCTransportProvider), menuName = "Netick/Transport/WebRTCTransportProvider")]
     public unsafe class WebRTCTransportProvider : NetworkTransportProvider
     {
-        [SerializeField] private float _timeoutDuration = 10f;
         [SerializeField] private string[] _iceServers;
+        [SerializeField] private float _timeoutDuration = 10f;
+        [SerializeField] private IceTricklingConfig _iceTricklingConfig;
+        [SerializeField] private JamesFrowen.SimpleWeb.Log.Levels _signalingServerLogLevel;
 
         private void Reset()
         {
@@ -18,12 +20,22 @@ namespace Netick.Transport
             {
                 "stun:stun.l.google.com:19302"
             };
+
+            _iceTricklingConfig.IsManual = true;
+            _iceTricklingConfig.Duration = 0.5f;
         }
 
         public override NetworkTransport MakeTransportInstance()
         {
             WebRTCTransport transport = new();
-            transport.SetConfig(_iceServers, _timeoutDuration);
+
+            UserRTCConfig rtcConfig = new UserRTCConfig();
+            rtcConfig.TimeoutDuration = _timeoutDuration;
+            rtcConfig.IceTricklingConfig = _iceTricklingConfig;
+            rtcConfig.IceServers = _iceServers;
+            transport.SetConfig(rtcConfig);
+
+            JamesFrowen.SimpleWeb.Log.level = _signalingServerLogLevel;
 
             return transport;
         }
@@ -49,14 +61,7 @@ namespace Netick.Transport
             private WebRTCNetManager _netManager;
             private BitBuffer _bitBuffer;
 
-            private string[] _iceServers;
-            private float _connectTimeoutDuration;
-
-            public void SetConfig(string[] iceServers, float connectTimeoutDuration)
-            {
-                _iceServers = iceServers;
-                _connectTimeoutDuration = connectTimeoutDuration;
-            }
+            private UserRTCConfig _userRTCConfig;
 
             public override void Init()
             {
@@ -70,7 +75,12 @@ namespace Netick.Transport
                 _bitBuffer = new BitBuffer(createChunks: false);
 
                 _netManager.Init(Engine.Config.MaxPlayers);
-                _netManager.SetConfig(_iceServers, _connectTimeoutDuration);
+                _netManager.SetConfig(_userRTCConfig);
+            }
+
+            public void SetConfig(UserRTCConfig userRTCConfig)
+            {
+                _userRTCConfig = userRTCConfig;
             }
 
             public override void Connect(string address, int port, byte[] connectionData, int connectionDataLength)

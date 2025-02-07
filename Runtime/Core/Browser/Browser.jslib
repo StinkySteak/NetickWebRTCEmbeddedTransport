@@ -68,18 +68,20 @@ mergeInto(LibraryManager.library, {
                 Module.dynCall_v(this.onIceConnectionStateChangeCallback);
         };
 
+        console.log("subscribe onDataChannel");
+
         this.peerConnection.ondatachannel = (event) => {
 
             if (this.onDataChannelCallback) {
+                console.log("Module.dynCall_v(this.onDataChannelCallback);");
                 Module.dynCall_v(this.onDataChannelCallback);
             }
 
-            this.dataChannelEventQueue = true;
             this.dataChannel = event.channel;
 
             this.dataChannel.onopen = (event) => {
                 if (this.onDataChannelOpenCallback)
-                    Module.dynCall_v(this.onMessageCallback);
+                    Module.dynCall_v(this.onDataChannelOpenCallback);
             };
 
             this.dataChannel.onmessage = (event) => {
@@ -187,6 +189,11 @@ mergeInto(LibraryManager.library, {
 
     WebRTC_CreateDataChannel: function () {
         this.dataChannel = this.peerConnection.createDataChannel("data");
+
+        this.dataChannel.onopen = (event) => {
+                if (this.onDataChannelOpenCallback)
+                    Module.dynCall_v(this.onDataChannelOpenCallback);
+        };
 
         this.dataChannel.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
