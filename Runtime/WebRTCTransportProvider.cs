@@ -55,6 +55,16 @@ namespace Netick.Transport
             {
                 Peer.Send(ptr, length);
             }
+
+            public override void SendUserData(IntPtr ptr, int length, TransportDeliveryMethod transportDeliveryMethod)
+            {
+                if (transportDeliveryMethod == TransportDeliveryMethod.Reliable)
+                {
+                    Debug.LogError($"[{nameof(WebRTCConnection)}]: Reliable is unsupported at the moment");
+                }
+
+                Peer.Send(ptr, length);
+            }
         }
 
         public unsafe class WebRTCTransport : NetworkTransport, IWebRTCNetEventListener
