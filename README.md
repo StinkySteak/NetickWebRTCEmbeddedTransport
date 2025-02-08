@@ -8,8 +8,8 @@ If you are new to WebRTC, check out the resources section down below
 
 | Feature        | Description                                  | Status       |
 |----------------|----------------------------------------------|--------------|
-| Native Support | Based on the Unity WebRTC supported platform | Experimental |
-| WebGL Support  | WebGL acting as a client                     | Experimental |
+| Native Support | Based on the Unity WebRTC supported platform | Beta |
+| WebGL Support  | WebGL acting as a client                     | Beta |
 
 ## Installation
 
