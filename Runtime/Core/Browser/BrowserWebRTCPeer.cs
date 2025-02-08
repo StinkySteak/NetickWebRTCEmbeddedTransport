@@ -25,7 +25,8 @@ namespace Netick.Transport.WebRTC
         private SimulationTimer _timerIceTrickling;
 
         private UserRTCConfig _userRTCConfig;
-        
+        private WebSocketSignalingConfig _webSocketSignalingConfig;
+
         public override IEndPoint EndPoint => _endPoint;
         public override bool IsConnectionOpen => Browser.WebRTC_IsConnectionOpen();
         public override bool IsTimedOut => _isTimedOut;
@@ -275,13 +276,15 @@ namespace Netick.Transport.WebRTC
             Browser.WebRTC_SetRemoteDescription(message);
         }
 
-        public override void SetConfig(UserRTCConfig userRTCConfig)
+        public override void SetConfig(UserRTCConfig userRTCConfig, WebSocketSignalingConfig webSocketSignalingConfig)
         {
             _userRTCConfig = userRTCConfig;
+            _webSocketSignalingConfig = webSocketSignalingConfig;
         }
 
         public override void Connect(string address, int port)
         {
+            _signalingServiceClient.SetConfig(_webSocketSignalingConfig);
             _signalingServiceClient.OnConnectedToServer += OnConnectedToServer;
             _signalingServiceClient.Start();
 

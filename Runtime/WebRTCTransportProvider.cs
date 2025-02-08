@@ -12,6 +12,9 @@ namespace Netick.Transport
         [SerializeField] private string[] _iceServers;
         [SerializeField] private float _timeoutDuration = 10f;
         [SerializeField] private IceTricklingConfig _iceTricklingConfig;
+
+        [Space]
+        [SerializeField] private WebSocketSignalingConfig _webSocketSignalingConfig;
         [SerializeField] private JamesFrowen.SimpleWeb.Log.Levels _signalingServerLogLevel;
 
         private void Reset()
@@ -33,7 +36,7 @@ namespace Netick.Transport
             rtcConfig.TimeoutDuration = _timeoutDuration;
             rtcConfig.IceTricklingConfig = _iceTricklingConfig;
             rtcConfig.IceServers = _iceServers;
-            transport.SetConfig(rtcConfig);
+            transport.SetConfig(rtcConfig, _webSocketSignalingConfig);
 
             JamesFrowen.SimpleWeb.Log.level = _signalingServerLogLevel;
 
@@ -62,6 +65,7 @@ namespace Netick.Transport
             private BitBuffer _bitBuffer;
 
             private UserRTCConfig _userRTCConfig;
+            private WebSocketSignalingConfig _webSocketSignalingConfig;
 
             public override void Init()
             {
@@ -75,12 +79,13 @@ namespace Netick.Transport
                 _bitBuffer = new BitBuffer(createChunks: false);
 
                 _netManager.Init(Engine.Config.MaxPlayers);
-                _netManager.SetConfig(_userRTCConfig);
+                _netManager.SetConfig(_userRTCConfig, _webSocketSignalingConfig);
             }
 
-            public void SetConfig(UserRTCConfig userRTCConfig)
+            public void SetConfig(UserRTCConfig userRTCConfig, WebSocketSignalingConfig webSocketSignalingConfig)
             {
                 _userRTCConfig = userRTCConfig;
+                _webSocketSignalingConfig = webSocketSignalingConfig;
             }
 
             public override void Connect(string address, int port, byte[] connectionData, int connectionDataLength)

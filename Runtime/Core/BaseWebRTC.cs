@@ -11,7 +11,7 @@ namespace Netick.Transport.WebRTC
         public event Action<BaseWebRTCPeer> OnConnectionClosed;
         public event Action<BaseWebRTCPeer> OnTimeout;
 
-        public abstract void SetConfig(UserRTCConfig userRTCConfig);
+        public abstract void SetConfig(UserRTCConfig userRTCConfig, WebSocketSignalingConfig webSocketSignalingConfig);
 
         public abstract void Send(IntPtr ptr, int length);
 

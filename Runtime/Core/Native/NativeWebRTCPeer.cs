@@ -35,7 +35,7 @@ namespace Netick.Transport.WebRTC
 
         public override void Send(IntPtr ptr, int length) { }
 
-        public override void SetConfig(UserRTCConfig userConfig) { }
+        public override void SetConfig(UserRTCConfig userConfig, WebSocketSignalingConfig webSocketSignalingConfig) { }
 
         public override void SetConnectionId(int id) { }
 
@@ -48,6 +48,7 @@ namespace Netick.Transport.WebRTC
         private WebSocketSignalingServer _signalingServiceServer;
 
         private UserRTCConfig _rtcConfig;
+        private WebSocketSignalingConfig _webSocketSignalingConfig;
 
         private SimulationTimer _timerTimeout;
         private SimulationTimer _timerIceTrickling;
@@ -90,9 +91,10 @@ namespace Netick.Transport.WebRTC
             return _dataChannel.ReadyState;
         }
 
-        public override void SetConfig(UserRTCConfig userRTCConfig)
+        public override void SetConfig(UserRTCConfig userRTCConfig, WebSocketSignalingConfig webSocketSignalingConfig)
         {
             _rtcConfig = userRTCConfig;
+            _webSocketSignalingConfig = webSocketSignalingConfig;
         }
 
         public override void Start(RunMode peerMode)
@@ -114,8 +116,9 @@ namespace Netick.Transport.WebRTC
             Log("Starting as Client");
 
             _signalingServiceClient.OnConnectedToServer += OnClientConnectedToSignalingServer;
-            _signalingServiceClient.Start();
+            _signalingServiceClient.SetConfig(_webSocketSignalingConfig);
 
+            _signalingServiceClient.Start();
             _signalingServiceClient.Connect(address, port);
 
             _timerTimeout = SimulationTimer.CreateFromSeconds(_rtcConfig.TimeoutDuration);

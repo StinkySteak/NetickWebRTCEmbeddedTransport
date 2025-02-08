@@ -62,6 +62,7 @@ namespace Netick.Transport.WebRTC
         private void OnData(int clientId, ArraySegment<byte> data)
         {
             string json = Encoding.UTF8.GetString(data);
+
             SignalingMessage message = JsonConvert.DeserializeObject<SignalingMessage>(json);
 
             if (message.Type == SignalingMessageType.Offer)

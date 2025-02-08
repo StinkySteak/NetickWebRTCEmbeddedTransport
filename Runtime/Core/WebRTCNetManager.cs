@@ -17,6 +17,7 @@ namespace Netick.Transport.WebRTC
         private BaseWebRTCPeer _serverConnectionCandidate;
         private BaseWebRTCPeer _serverConnection;
         private UserRTCConfig _userRTCConfig;
+        private WebSocketSignalingConfig _webSocketSignalingConfig;
 
         public WebRTCNetManager(IWebRTCNetEventListener listener)
         {
@@ -42,9 +43,10 @@ namespace Netick.Transport.WebRTC
             _candidateClients = new List<BaseWebRTCPeer>(maxClients);
         }
 
-        public void SetConfig(UserRTCConfig userRTCConfig)
+        public void SetConfig(UserRTCConfig userRTCConfig, WebSocketSignalingConfig webSocketSignalingConfig)
         {
             _userRTCConfig = userRTCConfig;
+            _webSocketSignalingConfig = webSocketSignalingConfig;
         }
 
         public void Start(RunMode runMode, int port = 0)
@@ -66,7 +68,7 @@ namespace Netick.Transport.WebRTC
         {
             _serverConnectionCandidate = ConstructWebRTCPeer();
 
-            _serverConnectionCandidate.SetConfig(_userRTCConfig);
+            _serverConnectionCandidate.SetConfig(_userRTCConfig, _webSocketSignalingConfig);
             _serverConnectionCandidate.Start(RunMode.Client);
 
             _serverConnectionCandidate.OnConnectionClosed += OnServerConnectionClosed;
@@ -125,7 +127,7 @@ namespace Netick.Transport.WebRTC
         {
             NativeWebRTCPeer candidatePeer = new NativeWebRTCPeer();
 
-            candidatePeer.SetConfig(_userRTCConfig);
+            candidatePeer.SetConfig(_userRTCConfig, _webSocketSignalingConfig);
             candidatePeer.SetSignalingServer(_signalingServer);
             candidatePeer.Start(RunMode.Server);
 

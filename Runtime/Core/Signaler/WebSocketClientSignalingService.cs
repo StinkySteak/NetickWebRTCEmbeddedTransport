@@ -12,10 +12,19 @@ namespace Netick.Transport.WebRTC
         public event Action<int, string> OnServerAnswered;
         public event Action OnConnectedToServer;
         public event Action OnDisconnectedFromServer;
+        private WebSocketSignalingConfig _webSocketSignalingConfig;
+
+        private const string SchemeDefault = "ws";
+        private const string SchemeSecure = "wss";
 
         public void PollUpdate()
         {
             _webClient?.ProcessMessageQueue();
+        }
+
+        public void SetConfig(WebSocketSignalingConfig webSocketSignalingConfig)
+        {
+            _webSocketSignalingConfig = webSocketSignalingConfig;
         }
 
         public void Start()
@@ -39,12 +48,20 @@ namespace Netick.Transport.WebRTC
         {
             UriBuilder builder = new()
             {
-                Scheme = "ws",
+                Scheme = GetScheme(_webSocketSignalingConfig.EnableEncryption),
                 Host = url,
                 Port = port
             };
 
             _webClient.Connect(builder.Uri);
+        }
+
+        private string GetScheme(bool isEncryptedConnection)
+        {
+            if (!isEncryptedConnection)
+                return SchemeDefault;
+
+            return SchemeSecure;
         }
 
         private void OnWebsocketConnected()
