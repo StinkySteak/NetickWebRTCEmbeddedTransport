@@ -87,7 +87,7 @@ namespace Netick.Transport.WebRTC
 
         private void OnServerConnectionTimeout(BaseWebRTCPeer serverConnection)
         {
-            _listener.OnPeerDisconnected(_serverConnection, DisconnectReason.Timeout);
+            _listener.OnPeerDisconnected(serverConnection, DisconnectReason.Timeout);
         }
 
         private void OnServerConnectionClosed(BaseWebRTCPeer serverConnection)
