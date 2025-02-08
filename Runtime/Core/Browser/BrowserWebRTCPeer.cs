@@ -297,7 +297,11 @@ namespace Netick.Transport.WebRTC
         {
             ConstructRTCPeerConnection();
 
-            Browser.WebRTC_CreateDataChannel();
+            BrowserRTCDataChannelInit rtcDataChannelConfig = new BrowserRTCDataChannelInit();
+            rtcDataChannelConfig.maxRetransmits = 0;
+            rtcDataChannelConfig.ordered = false;
+
+            Browser.WebRTC_CreateDataChannel(rtcDataChannelConfig);
             Browser.WebRTC_SetCallbackOnMessage(OnMessage);
 
             Browser.WebRTC_CreateOffer();

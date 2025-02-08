@@ -170,8 +170,15 @@ namespace StinkySteak.WebRealtimeCommunication
         [DllImport("__Internal")]
         public static extern IntPtr WebRTC_Unsafe_GetRemoteDescription();
 
+        public static void WebRTC_CreateDataChannel(BrowserRTCDataChannelInit dataChannelConfig)
+        {
+            string json = JsonConvert.SerializeObject(dataChannelConfig);
+
+            WebRTC_Unsafe_CreateDataChannel(json);
+        }
+
         [DllImport("__Internal")]
-        public static extern void WebRTC_CreateDataChannel();
+        public static extern void WebRTC_Unsafe_CreateDataChannel(string configJson);
 
         [DllImport("__Internal")]
         public static extern bool WebRTC_IsConnectionOpen();
@@ -237,5 +244,11 @@ namespace StinkySteak.WebRealtimeCommunication
         Pranswer,
         Answer,
         Rollback
+    }
+
+    public struct BrowserRTCDataChannelInit
+    {
+        public bool ordered;
+        public int maxRetransmits;
     }
 }

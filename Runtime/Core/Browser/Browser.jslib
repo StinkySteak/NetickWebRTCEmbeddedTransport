@@ -187,8 +187,13 @@ mergeInto(LibraryManager.library, {
         this.opCreateAnswerDone = true;
     },
 
-    WebRTC_CreateDataChannel: function () {
-        this.dataChannel = this.peerConnection.createDataChannel("data");
+    WebRTC_Unsafe_CreateDataChannel: function (configJson) {
+
+        const json = UTF8ToString(configJson);
+
+        let config = JSON.parse(json);
+
+        this.dataChannel = this.peerConnection.createDataChannel("sendData", config);
 
         this.dataChannel.onopen = (event) => {
                 if (this.onDataChannelOpenCallback)
