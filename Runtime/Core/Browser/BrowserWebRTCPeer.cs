@@ -21,7 +21,7 @@ namespace Netick.Transport.WebRTC
         private bool _hasSentIceGatheringComplete;
         private bool _isTimedOut;
 
-        private SimulationTimer _timerTimeout;
+        private SimulationTimer _timerLocalTimeout;
         private SimulationTimer _timerIceTrickling;
 
         private UserRTCConfig _userRTCConfig;
@@ -80,7 +80,7 @@ namespace Netick.Transport.WebRTC
         [MonoPInvokeCallback(typeof(OnChannelOpen))]
         private static void OnChannelOpen()
         {
-            Instance._timerTimeout = SimulationTimer.None;
+            Instance._timerLocalTimeout = SimulationTimer.None;
 
             string remoteDescription = Browser.WebRTC_GetRemoteDescription();
 
@@ -92,8 +92,6 @@ namespace Netick.Transport.WebRTC
         [MonoPInvokeCallback(typeof(OnDataChannel))]
         private static void OnDataChannel()
         {
-            Instance.Log("OnDataChannel");
-
             string remoteDescription = Browser.WebRTC_GetRemoteDescription();
 
             SDPParser.ParseSDP(remoteDescription, out string ip, out int port);
@@ -111,9 +109,9 @@ namespace Netick.Transport.WebRTC
         {
             if (_peerMode == RunMode.Client)
             {
-                if (_timerTimeout.IsExpired())
+                if (_timerLocalTimeout.IsExpired())
                 {
-                    _timerTimeout = SimulationTimer.None;
+                    _timerLocalTimeout = SimulationTimer.None;
                     _isTimedOut = true;
                     BroadcastOnTimeout();
                     return;
@@ -259,6 +257,7 @@ namespace Netick.Transport.WebRTC
 
         private void SendAnswerToClient()
         {
+            Debug.LogError($"This method is not supported for browser webRTC");
             _signalingServiceServer.SendAnswerToClient(_connectionId, _answer);
         }
 
@@ -285,15 +284,26 @@ namespace Netick.Transport.WebRTC
         public override void Connect(string address, int port)
         {
             _signalingServiceClient.SetConfig(_webSocketSignalingConfig);
-            _signalingServiceClient.OnConnectedToServer += OnConnectedToServer;
+            _signalingServiceClient.OnConnectedToServer += OnConnectedToSignalingServer;
+            _signalingServiceClient.OnDisconnectedFromServer += OnDisconnectedFromSignalingServer;
             _signalingServiceClient.Start();
 
             _signalingServiceClient.Connect(address, port);
 
-            _timerTimeout = SimulationTimer.CreateFromSeconds(_userRTCConfig.TimeoutDuration);
+            _timerLocalTimeout = SimulationTimer.CreateFromSeconds(_userRTCConfig.TimeoutDuration);
         }
 
-        private void OnConnectedToServer()
+        private void OnDisconnectedFromSignalingServer()
+        {
+            bool isSuccess = _signalingServiceClient.IsSuccess;
+
+            if (isSuccess) return;
+
+            _timerLocalTimeout = SimulationTimer.None;
+            BroadcastOnTimeout();
+        }
+
+        private void OnConnectedToSignalingServer()
         {
             ConstructRTCPeerConnection();
 
@@ -331,6 +341,7 @@ namespace Netick.Transport.WebRTC
         public override void CloseConnection()
         {
             Browser.WebRTC_CloseConnection();
+            Browser.WebRTC_Reset();
         }
 
         public override void SetSignalingServer(WebSocketSignalingServer signalingServer)

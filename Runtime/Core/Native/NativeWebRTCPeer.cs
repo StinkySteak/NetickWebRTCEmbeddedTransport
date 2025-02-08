@@ -50,7 +50,7 @@ namespace Netick.Transport.WebRTC
         private UserRTCConfig _rtcConfig;
         private WebSocketSignalingConfig _webSocketSignalingConfig;
 
-        private SimulationTimer _timerTimeout;
+        private SimulationTimer _timerLocalTimeout;
         private SimulationTimer _timerIceTrickling;
         private bool _hasSentIceGatheringComplete;
 
@@ -115,13 +115,24 @@ namespace Netick.Transport.WebRTC
         {
             Log("Starting as Client");
 
+            _signalingServiceClient.OnDisconnectedFromServer += OnDisconnectedFromSignalingServer;
             _signalingServiceClient.OnConnectedToServer += OnClientConnectedToSignalingServer;
             _signalingServiceClient.SetConfig(_webSocketSignalingConfig);
 
             _signalingServiceClient.Start();
             _signalingServiceClient.Connect(address, port);
 
-            _timerTimeout = SimulationTimer.CreateFromSeconds(_rtcConfig.TimeoutDuration);
+            _timerLocalTimeout = SimulationTimer.CreateFromSeconds(_rtcConfig.TimeoutDuration);
+        }
+
+        private void OnDisconnectedFromSignalingServer()
+        {
+            bool isSuccess = _signalingServiceClient.IsSuccess;
+
+            if (isSuccess) return;
+
+            TimeoutLocalPeer();
+            CloseConnection();
         }
 
         public override void SetConnectionId(int id)
@@ -161,17 +172,21 @@ namespace Netick.Transport.WebRTC
             Debug.LogError($"[{this}]: {msg}");
         }
 
+        private void TimeoutLocalPeer()
+        {
+            _timerLocalTimeout = SimulationTimer.None;
+            _isTimedOut = true;
+            BroadcastOnTimeout();
+        }
+
         public override void PollUpdate()
         {
             if (_peerMode == RunMode.Client)
             {
-                if (_timerTimeout.IsExpired())
+                if (_timerLocalTimeout.IsExpired())
                 {
-                    _timerTimeout = SimulationTimer.None;
-
+                    TimeoutLocalPeer();
                     CloseConnection();
-
-                    _isTimedOut = true;
                     return;
                 }
 
@@ -340,7 +355,7 @@ namespace Netick.Transport.WebRTC
             SDPParser.ParseSDP(_peerConnection.RemoteDescription.sdp, out string ip, out int port);
 
             _endPoint.Init(ip, port);
-            _timerTimeout = SimulationTimer.None;
+            _timerLocalTimeout = SimulationTimer.None;
         }
 
         private void OnChannelClose()
@@ -414,7 +429,7 @@ namespace Netick.Transport.WebRTC
 
             if (state == RTCIceConnectionState.Connected)
             {
-                _timerTimeout = SimulationTimer.None;
+                _timerLocalTimeout = SimulationTimer.None;
             }
         }
 

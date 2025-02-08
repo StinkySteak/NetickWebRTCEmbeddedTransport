@@ -17,15 +17,9 @@ namespace Netick.Transport.WebRTC
         private const string SchemeDefault = "ws";
         private const string SchemeSecure = "wss";
 
-        public void PollUpdate()
-        {
-            _webClient?.ProcessMessageQueue();
-        }
+        private bool _isSuccess;
 
-        public void SetConfig(WebSocketSignalingConfig webSocketSignalingConfig)
-        {
-            _webSocketSignalingConfig = webSocketSignalingConfig;
-        }
+        public bool IsSuccess => _isSuccess;
 
         public void Start()
         {
@@ -38,10 +32,9 @@ namespace Netick.Transport.WebRTC
             _webClient.onError += (exception) => Debug.Log($"Error because of Server, Error:{exception}");
         }
 
-        private void OnDisconnected()
+        public void SetConfig(WebSocketSignalingConfig webSocketSignalingConfig)
         {
-            OnDisconnectedFromServer?.Invoke();
-            Debug.Log($"Disconnected from signaling server");
+            _webSocketSignalingConfig = webSocketSignalingConfig;
         }
 
         public void Connect(string url, int port)
@@ -56,6 +49,18 @@ namespace Netick.Transport.WebRTC
             _webClient.Connect(builder.Uri);
         }
 
+        public void PollUpdate()
+        {
+            _webClient?.ProcessMessageQueue();
+        }
+
+        private void OnDisconnected()
+        {
+            Debug.Log($"Disconnected from signaling server");
+            OnDisconnectedFromServer?.Invoke();
+        }
+
+        
         private string GetScheme(bool isEncryptedConnection)
         {
             if (!isEncryptedConnection)
@@ -97,6 +102,8 @@ namespace Netick.Transport.WebRTC
                 OnServerAnswered?.Invoke(myId, answer);
 
                 Debug.Log($"Signaling Client: disconnecting...");
+
+                _isSuccess = true;
 
                 _webClient.Disconnect();
             }
