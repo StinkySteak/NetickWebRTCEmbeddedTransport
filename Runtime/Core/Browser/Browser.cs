@@ -206,6 +206,9 @@ namespace StinkySteak.WebRealtimeCommunication
         
         [DllImport("__Internal")]
         public static extern bool WebRTC_GetIsPeerConnectionCreated();
+
+        [DllImport("__Internal")]
+        public static extern bool WebRTC_Reset();
     }
 
     public delegate void OnMessageCallback(IntPtr ptr, int length);

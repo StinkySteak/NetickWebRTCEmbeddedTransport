@@ -332,11 +332,39 @@ mergeInto(LibraryManager.library, {
         if (this.dataChannel)
             this.dataChannel.close();
 
-        this.peerConnection.close();
+        if (this.peerConnection)
+           this.peerConnection.close();
     },
 
     WebRTC_GetIsPeerConnectionCreated: function () {
         return this.peerConnection != null;
+    },
+
+     WebRTC_Reset: function () {
+        this.peerConnection = null;
+        this.dataChannel = null;
+
+        this.offerJson = null;
+        this.answerJson = null;
+
+        this.opCreateOffer = null;
+        this.opCreateOfferDone = null;
+
+        this.opCreateAnswer = null;
+        this.opCreateAnswerDone = null;
+
+        this.opSetLocalDescription = null;
+        this.opSetLocalDescriptionDone = null;
+
+        this.opSetRemoteDescription = null;
+        this.opSetRemoteDescriptionDone = null;
+
+        this.onMessageCallback = null;
+        this.onIceConnectionStateChangeCallback = null;
+        this.onDataChannelCallback = null;
+        this.onIceCandidateCallback = null;
+        this.onIceCandidateGathertingStateCallback = null;
+        this.onDataChannelOpenCallback = null;
     },
 
     WebRTC_Unsafe_GetGatheringState: function () {
