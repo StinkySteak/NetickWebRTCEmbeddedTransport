@@ -26,6 +26,7 @@ namespace Netick.Transport
 
             _iceTricklingConfig.IsManual = true;
             _iceTricklingConfig.Duration = 0.5f;
+            _webSocketSignalingConfig.SignalingServerConfig = WebSocketServerSignalingConfig.Default();
         }
 
         public override NetworkTransport MakeTransportInstance()

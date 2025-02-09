@@ -41,7 +41,7 @@ namespace Netick.Transport.WebRTC
         {
             UriBuilder builder = new()
             {
-                Scheme = GetScheme(_webSocketSignalingConfig.EnableEncryption),
+                Scheme = GetScheme(_webSocketSignalingConfig.ConnectSecurely),
                 Host = url,
                 Port = port
             };

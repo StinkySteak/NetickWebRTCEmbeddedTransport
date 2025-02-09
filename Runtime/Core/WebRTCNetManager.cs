@@ -56,6 +56,7 @@ namespace Netick.Transport.WebRTC
             if (runMode == RunMode.Server)
             {
                 _signalingServer = new WebSocketSignalingServer();
+                _signalingServer.SetConfig(_webSocketSignalingConfig.SignalingServerConfig);
                 _signalingServer.OnClientOffered += OnClientOffered;
 
                 _signalingServer.Start((ushort)port);

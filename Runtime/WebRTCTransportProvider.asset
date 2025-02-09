@@ -18,3 +18,10 @@ MonoBehaviour:
   _iceTricklingConfig:
     IsManual: 1
     Duration: 0.5
+  _webSocketSignalingConfig:
+    ConnectSecurely: 0
+    SignalingServerConfig:
+      EnableSSL: 0
+      SslProtocols: 3072
+      SslFilePath: ./cert.json
+  _signalingServerLogLevel: 0

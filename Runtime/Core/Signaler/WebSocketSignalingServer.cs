@@ -1,4 +1,5 @@
 using System;
+using System.Security.Authentication;
 using System.Text;
 using JamesFrowen.SimpleWeb;
 using Newtonsoft.Json;
@@ -13,10 +14,12 @@ namespace Netick.Transport.WebRTC
         public event Action<int> OnClientDisconnected;
         public event Action<int, string> OnClientOffered;
 
+        private WebSocketServerSignalingConfig _config;
+
         public void Start(ushort listenPort)
         {
             TcpConfig tcpConfig = new(noDelay: true, sendTimeout: 5_000, receiveTimeout: 20_000);
-            _server = new SimpleWebServer(5000, tcpConfig, ushort.MaxValue, 5_000, new SslConfig());
+            _server = new SimpleWebServer(5000, tcpConfig, ushort.MaxValue, 5_000, GetSslConfig(_config.EnableSSL, _config.SslFilePath, _config.SslProtocols));
 
             _server.onConnect += OnConnect;
             _server.onData += OnData;
@@ -25,6 +28,22 @@ namespace Netick.Transport.WebRTC
 
             _server.Start(listenPort);
             Debug.Log($"Signaling server has been started to listen on: {listenPort}");
+        }
+
+        public void SetConfig(WebSocketServerSignalingConfig config)
+        {
+            _config = config;
+        }
+
+        private SslConfig GetSslConfig(bool isSslEnabled, string sslCertFileName = null, SslProtocols sslProtocols = SslProtocols.None)
+        {
+            if (!isSslEnabled)
+            {
+                return new SslConfig();
+            }
+
+            SslConfig config = SslConfigLoader.Load(true, sslCertFileName, sslProtocols);
+            return config;
         }
 
         public void PollUpdate()
