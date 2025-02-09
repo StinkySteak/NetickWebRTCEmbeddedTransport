@@ -41,6 +41,12 @@ https://github.com/NetickNetworking/NetickForUnity
 | Timeout Duration | Define how long timeout will be called upon failed to connect |
 | ICE Servers            | URLs of your STUN/TURN servers                                                                         |
 
+### HTTPS/WSS Support
+Enable `ConnectSecurely` on the transport then, do one of these:
+
+1. [Through Reverse Proxy (Recommended)](https://caddyserver.com/docs/quick-starts/reverse-proxy)
+2. [Through SSL Certificate](https://github.com/StinkySteak/SimpleWebTransport/blob/master/HowToCreateSSLCert.md)
+
 ### Technical Design
 - This implementation of WebRTC is a little different from the others, where we run the Signaling server inside unity itself.
 
