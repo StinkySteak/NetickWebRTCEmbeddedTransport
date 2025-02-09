@@ -148,7 +148,7 @@ namespace Netick.Transport.WebRTC
 
         public override void CloseConnection()
         {
-            _peerConnection.Close();
+            _peerConnection?.Close();
             _dataChannel?.Close();
         }
 
