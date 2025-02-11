@@ -9,7 +9,7 @@ namespace Netick.Transport
     [CreateAssetMenu(fileName = nameof(WebRTCTransportProvider), menuName = "Netick/Transport/WebRTCTransportProvider")]
     public unsafe class WebRTCTransportProvider : NetworkTransportProvider
     {
-        [SerializeField] private string[] _iceServers;
+        [SerializeField] private IceServer[] _iceServers;
         [SerializeField] private float _timeoutDuration = 10f;
         [SerializeField] private IceTricklingConfig _iceTricklingConfig;
 
@@ -19,9 +19,12 @@ namespace Netick.Transport
 
         private void Reset()
         {
-            _iceServers = new string[]
+            _iceServers = new IceServer[1];
+            _iceServers[0] = new IceServer()
             {
-                "stun:stun.l.google.com:19302"
+                Url = new string[] { "stun:stun.l.google.com:19302" },
+                Username = string.Empty,
+                Credential = string.Empty,
             };
 
             _iceTricklingConfig.IsManual = true;
@@ -193,5 +196,13 @@ namespace Netick.Transport
                 }
             }
         }
+    }
+
+    [Serializable]
+    public struct IceServer
+    {
+        public string[] Url;
+        public string Username;
+        public string Credential;
     }
 }

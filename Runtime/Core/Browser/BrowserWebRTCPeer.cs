@@ -319,18 +319,32 @@ namespace Netick.Transport.WebRTC
 
         private BrowserRTCConfiguration GetSelectedSdpSemantics()
         {
-            BrowserRTCIceServer iceServer = new()
-            {
-                urls = _userRTCConfig.IceServers,
-            };
-
             BrowserRTCConfiguration config = default;
-            config.iceServers = new[]
-            {
-                iceServer
-            };
+            config.iceServers = GetRTCIceFromUserIce(_userRTCConfig.IceServers);
 
             return config;
+        }
+
+        protected BrowserRTCIceServer[] GetRTCIceFromUserIce(IceServer[] iceServers)
+        {
+            BrowserRTCIceServer[] rtcIceServers = new BrowserRTCIceServer[iceServers.Length];
+
+            for (int i = 0; i < iceServers.Length; i++)
+            {
+                IceServer ice = iceServers[i];
+
+                BrowserRTCIceServer rtcIce = new BrowserRTCIceServer()
+                {
+                    credential = ice.Credential,
+                    credentialType = BrowserRTCIceCredentialType.Password,
+                    urls = ice.Url,
+                    username = ice.Username,
+                };
+
+                rtcIceServers[i] = rtcIce;
+            }
+
+            return rtcIceServers;
         }
 
         public override void Send(IntPtr ptr, int length)

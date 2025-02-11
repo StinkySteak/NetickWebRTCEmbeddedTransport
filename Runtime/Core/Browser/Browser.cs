@@ -233,6 +233,9 @@ namespace StinkySteak.WebRealtimeCommunication
     public struct BrowserRTCIceServer
     {
         public string[] urls;
+        public BrowserRTCIceCredentialType credentialType;
+        public string username;
+        public string credential;
     }
 
     public struct BrowserRTCSessionDescription
@@ -247,6 +250,12 @@ namespace StinkySteak.WebRealtimeCommunication
         Pranswer,
         Answer,
         Rollback
+    }
+
+    public enum BrowserRTCIceCredentialType
+    {
+        Password,
+        OAuth
     }
 
     public struct BrowserRTCDataChannelInit

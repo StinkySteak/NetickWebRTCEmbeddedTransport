@@ -3,7 +3,7 @@ namespace Netick.Transport.WebRTC
     [System.Serializable]
     public struct UserRTCConfig
     {
-        public string[] IceServers;
+        public IceServer[] IceServers;
         public float TimeoutDuration;
         public IceTricklingConfig IceTricklingConfig;
     }

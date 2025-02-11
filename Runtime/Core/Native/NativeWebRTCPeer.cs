@@ -336,18 +336,32 @@ namespace Netick.Transport.WebRTC
 
         private RTCConfiguration GetSelectedSdpSemantics()
         {
-            RTCIceServer iceServer = new()
-            {
-                urls = _rtcConfig.IceServers
-            };
-
             RTCConfiguration config = default;
-            config.iceServers = new[]
-            {
-                iceServer
-            };
+            config.iceServers = GetRTCIceFromUserIce(_rtcConfig.IceServers);
 
             return config;
+        }
+
+        protected RTCIceServer[] GetRTCIceFromUserIce(IceServer[] iceServers)
+        {
+            RTCIceServer[] rtcIceServers = new RTCIceServer[iceServers.Length];
+
+            for (int i = 0; i < iceServers.Length; i++)
+            {
+                IceServer ice = iceServers[i];
+
+                RTCIceServer rtcIce = new RTCIceServer()
+                {
+                    credential = ice.Credential,
+                    credentialType = RTCIceCredentialType.Password,
+                    urls = ice.Url,
+                    username = ice.Username,
+                };
+
+                rtcIceServers[i] = rtcIce;
+            }
+
+            return rtcIceServers;
         }
 
         private void OnChannelOpen()
