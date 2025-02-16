@@ -63,6 +63,7 @@ Enable `ConnectSecurely` on the transport then, do one of these:
 | Running host is not supported in browser  | Running host may supported in browser    |
 | Require Port forward the Signaling server | Port forward can be handled by the cloud |
 | Less overhead                             | More overhead                            |
+| Recommended for Dedicated Server                             | Recommended for Client Hosted                            |
 
 ### Resources to learn WebRTC
 - [Simple WebRTC Introduction](https://www.youtube.com/watch?v=8I2axE6j204)
