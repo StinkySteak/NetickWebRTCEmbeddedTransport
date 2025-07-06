@@ -1,6 +1,8 @@
 using System;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Serialization;
 
 namespace StinkySteak.WebRealtimeCommunication
 {
@@ -12,7 +14,12 @@ namespace StinkySteak.WebRealtimeCommunication
 
         public static void WebRTC_CreateRTCPeerConnection(BrowserRTCConfiguration config)
         {
-            string json = JsonConvert.SerializeObject(config);
+            StringEnumConverter settings = new StringEnumConverter()
+            {
+                NamingStrategy = new CamelCaseNamingStrategy()
+            };
+
+            string json = JsonConvert.SerializeObject(config, settings);
 
             WebRTC_Unsafe_CreateRTCPeerConnection(json);
         }
