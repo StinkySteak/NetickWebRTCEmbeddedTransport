@@ -8,10 +8,10 @@ using Unity.WebRTC;
 
 using System;
 using Newtonsoft.Json;
-using StinkySteak.SimulationTimer;
 using UnityEngine;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
+using StinkySteak.Timer;
 
 namespace Netick.Transport.WebRTC
 {
@@ -50,8 +50,8 @@ namespace Netick.Transport.WebRTC
         private UserRTCConfig _rtcConfig;
         private WebSocketSignalingConfig _webSocketSignalingConfig;
 
-        private SimulationTimer _timerLocalTimeout;
-        private SimulationTimer _timerIceTrickling;
+        private FlexTimer _timerLocalTimeout;
+        private FlexTimer _timerIceTrickling;
         private bool _hasSentIceGatheringComplete;
 
         private RTCPeerConnection _peerConnection;
@@ -122,7 +122,7 @@ namespace Netick.Transport.WebRTC
             _signalingServiceClient.Start();
             _signalingServiceClient.Connect(address, port);
 
-            _timerLocalTimeout = SimulationTimer.CreateFromSeconds(_rtcConfig.TimeoutDuration);
+            _timerLocalTimeout = FlexTimer.CreateFromSeconds(_rtcConfig.TimeoutDuration);
         }
 
         private void OnDisconnectedFromSignalingServer()
@@ -174,7 +174,7 @@ namespace Netick.Transport.WebRTC
 
         private void TimeoutLocalPeer()
         {
-            _timerLocalTimeout = SimulationTimer.None;
+            _timerLocalTimeout = FlexTimer.None;
             _isTimedOut = true;
             BroadcastOnTimeout();
         }
@@ -263,7 +263,7 @@ namespace Netick.Transport.WebRTC
                 _opSetOfferLocal = null;
 
                 if (_rtcConfig.IceTricklingConfig.IsManual)
-                    _timerIceTrickling = SimulationTimer.CreateFromSeconds(_rtcConfig.IceTricklingConfig.Duration);
+                    _timerIceTrickling = FlexTimer.CreateFromSeconds(_rtcConfig.IceTricklingConfig.Duration);
             }
         }
 
@@ -369,7 +369,7 @@ namespace Netick.Transport.WebRTC
             SDPParser.ParseSDP(_peerConnection.RemoteDescription.sdp, out string ip, out int port);
 
             _endPoint.Init(ip, port);
-            _timerLocalTimeout = SimulationTimer.None;
+            _timerLocalTimeout = FlexTimer.None;
         }
 
         private void OnChannelClose()
@@ -407,7 +407,7 @@ namespace Netick.Transport.WebRTC
 
             if (_peerConnection.GatheringState == RTCIceGatheringState.Complete || _timerIceTrickling.IsExpired())
             {
-                _timerIceTrickling = SimulationTimer.None;
+                _timerIceTrickling = FlexTimer.None;
 
                 _hasSentIceGatheringComplete = true;
 
@@ -443,7 +443,7 @@ namespace Netick.Transport.WebRTC
 
             if (state == RTCIceConnectionState.Connected)
             {
-                _timerLocalTimeout = SimulationTimer.None;
+                _timerLocalTimeout = FlexTimer.None;
             }
         }
 

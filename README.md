@@ -22,8 +22,8 @@ https://github.com/NetickNetworking/NetickForUnity
 
 ### Dependencies
 1. [UnityWebRTC 3.0.0-pre-8](https://github.com/Unity-Technologies/com.unity.webrtc) (Core functionality)
-1. [SimpleWebTransport](https://github.com/James-Frowen/SimpleWebTransport) (As Signaling Server)
-1. [UnitySimulationTimer](https://github.com/StinkySteak/Unity-Simulation-Timer) (Update Loop Timer)
+1. [SimpleWebTransport](https://github.com/James-Frowen/SimpleWebTransport) (As Signaling Server) (UPM: `https://github.com/James-Frowen/SimpleWebTransport.git?path=source`)
+1. [FlexTimer](https://github.com/StinkySteak/UnityFlexTimer)
 1. [Newtonsoft Json Unity](https://docs.unity3d.com/Packages/com.unity.nuget.newtonsoft-json@3.2/manual/index.html)
 
 ### Steps

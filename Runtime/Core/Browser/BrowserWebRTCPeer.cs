@@ -1,6 +1,6 @@
 using System;
 using AOT;
-using StinkySteak.SimulationTimer;
+using StinkySteak.Timer;
 using StinkySteak.WebRealtimeCommunication;
 using UnityEngine;
 
@@ -21,8 +21,8 @@ namespace Netick.Transport.WebRTC
         private bool _hasSentIceGatheringComplete;
         private bool _isTimedOut;
 
-        private SimulationTimer _timerLocalTimeout;
-        private SimulationTimer _timerIceTrickling;
+        private FlexTimer _timerLocalTimeout;
+        private FlexTimer _timerIceTrickling;
 
         private UserRTCConfig _userRTCConfig;
         private WebSocketSignalingConfig _webSocketSignalingConfig;
@@ -80,7 +80,7 @@ namespace Netick.Transport.WebRTC
         [MonoPInvokeCallback(typeof(OnChannelOpen))]
         private static void OnChannelOpen()
         {
-            Instance._timerLocalTimeout = SimulationTimer.None;
+            Instance._timerLocalTimeout = FlexTimer.None;
 
             string remoteDescription = Browser.WebRTC_GetRemoteDescription();
 
@@ -111,7 +111,7 @@ namespace Netick.Transport.WebRTC
             {
                 if (_timerLocalTimeout.IsExpired())
                 {
-                    _timerLocalTimeout = SimulationTimer.None;
+                    _timerLocalTimeout = FlexTimer.None;
                     _isTimedOut = true;
                     BroadcastOnTimeout();
                     return;
@@ -146,7 +146,7 @@ namespace Netick.Transport.WebRTC
                 Log("Answer has been set to local description!");
 
                 if (_userRTCConfig.IceTricklingConfig.IsManual)
-                    _timerIceTrickling = SimulationTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
+                    _timerIceTrickling = FlexTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
 
                 Browser.WebRTC_DisposeOpSetLocalDescription();
             }
@@ -196,7 +196,7 @@ namespace Netick.Transport.WebRTC
                 Log("Offer has been set to local!");
 
                 if (_userRTCConfig.IceTricklingConfig.IsManual)
-                    _timerIceTrickling = SimulationTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
+                    _timerIceTrickling = FlexTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
 
                 Browser.WebRTC_DisposeOpSetLocalDescription();
             }
@@ -237,7 +237,7 @@ namespace Netick.Transport.WebRTC
 
             if (Browser.WebRTC_GetGatheringState() == BrowserRTCIceGatheringState.Complete || _timerIceTrickling.IsExpired())
             {
-                _timerIceTrickling = SimulationTimer.None;
+                _timerIceTrickling = FlexTimer.None;
                 _hasSentIceGatheringComplete = true;
 
                 if (_peerMode == RunMode.Client)
@@ -290,7 +290,7 @@ namespace Netick.Transport.WebRTC
 
             _signalingServiceClient.Connect(address, port);
 
-            _timerLocalTimeout = SimulationTimer.CreateFromSeconds(_userRTCConfig.TimeoutDuration);
+            _timerLocalTimeout = FlexTimer.CreateFromSeconds(_userRTCConfig.TimeoutDuration);
         }
 
         private void OnDisconnectedFromSignalingServer()
@@ -299,7 +299,7 @@ namespace Netick.Transport.WebRTC
 
             if (isSuccess) return;
 
-            _timerLocalTimeout = SimulationTimer.None;
+            _timerLocalTimeout = FlexTimer.None;
             BroadcastOnTimeout();
         }
 
