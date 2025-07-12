@@ -312,7 +312,7 @@ namespace Netick.Transport.WebRTC
 
         public override void OnReceivedOfferFromClient(string offer)
         {
-            Log("Getting an offer from a client. Creating an answer...");
+            Log("Getting an offer from a client. Applying offer as remote description...");
 
             RTCSessionDescription sdpOffer = JsonConvert.DeserializeObject<RTCSessionDescription>(offer, _jsonSettings);
 
