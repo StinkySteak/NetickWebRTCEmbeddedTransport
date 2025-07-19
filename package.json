@@ -1,7 +1,7 @@
 {
   "name": "com.stinkysteak.webrtcembeddedtransportnetick",
   "version": "0.1.1",
-  "displayName": "WebRTC Transport for Netick",
+  "displayName": "WebRTC Embedded Transport for Netick",
   "description": "Allow developer to use WebRTC inside Netick",
   "unity": "2021.3",
   "author": {
