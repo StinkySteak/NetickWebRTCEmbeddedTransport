@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace Netick.Transport
 {
-    [CreateAssetMenu(fileName = nameof(WebRTCTransportProvider), menuName = "Netick/Transport/WebRTCTransportProvider")]
-    public unsafe class WebRTCTransportProvider : NetworkTransportProvider
+    [CreateAssetMenu(fileName = nameof(WebRTCEmbeddedTransportProvider), menuName = "Netick/Transport/WebRTCEmbeddedTransportProvider")]
+    public unsafe class WebRTCEmbeddedTransportProvider : NetworkTransportProvider
     {
         [SerializeField] private IceServer[] _iceServers;
         [SerializeField] private float _timeoutDuration = 10f;
@@ -16,6 +16,8 @@ namespace Netick.Transport
         [Space]
         [SerializeField] private WebSocketSignalingConfig _webSocketSignalingConfig;
         [SerializeField] private JamesFrowen.SimpleWeb.Log.Levels _signalingServerLogLevel;
+
+        public WebSocketSignalingConfig WebSocketSignalingConfig => _webSocketSignalingConfig;
 
         private void Reset()
         {
@@ -30,6 +32,11 @@ namespace Netick.Transport
             _iceTricklingConfig.IsManual = true;
             _iceTricklingConfig.Duration = 0.5f;
             _webSocketSignalingConfig.SignalingServerConfig = WebSocketServerSignalingConfig.Default();
+        }
+
+        public void SetWebSocketSignalingConfig(WebSocketSignalingConfig webSocketSignalingConfig)
+        {
+            _webSocketSignalingConfig = webSocketSignalingConfig;
         }
 
         public override NetworkTransport MakeTransportInstance()

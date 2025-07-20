@@ -9,11 +9,14 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6eed33514c50cbe4897b3421a23a1978, type: 3}
-  m_Name: WebRTCTransportProvider
+  m_Script: {fileID: 11500000, guid: e40634bc16d770749906334b36d506f8, type: 3}
+  m_Name: WebRTCEmbeddedTransportProvider
   m_EditorClassIdentifier: 
   _iceServers:
-  - stun:stun.l.google.com:19302
+  - Url:
+    - stun:stun.l.google.com:19302
+    Username: 
+    Credential: 
   _timeoutDuration: 10
   _iceTricklingConfig:
     IsManual: 1

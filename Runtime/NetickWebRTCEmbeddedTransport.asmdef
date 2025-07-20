@@ -1,5 +1,5 @@
 {
-    "name": "NetickWebRTCTransport",
+    "name": "NetickWebRTCEmbeddedTransport",
     "rootNamespace": "",
     "references": [
         "GUID:84ab7048dfa78794dae646246deff400",
