@@ -51,10 +51,10 @@ Enable `ConnectSecurely` on the transport then, do one of these:
 - This implementation of WebRTC is a little different from the others, where we run the Signaling server inside unity itself.
 
 #### Seperate Process
-![Preview](https://github.com/StinkySteak/NetickWebRTCTransport/blob/docs/tech_design_seperate.png)
+![Preview](https://github.com/StinkySteak/NetickWebRTCEmbeddedTransport/blob/docs/tech_design_seperate.png)
 
 #### Inside Unity
-![Preview](https://github.com/StinkySteak/NetickWebRTCTransport/blob/docs/tech_design_unified.png)
+![Preview](https://github.com/StinkySteak/NetickWebRTCEmbeddedTransport/blob/docs/tech_design_unified.png)
 
 
 | Inside Unity                              | Seperate Process                         |
