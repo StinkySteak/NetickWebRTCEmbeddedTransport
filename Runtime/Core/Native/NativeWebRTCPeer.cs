@@ -12,6 +12,7 @@ using UnityEngine;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using StinkySteak.Timer;
+using UnityEngine.Rendering;
 
 namespace Netick.Transport.WebRTC
 {
@@ -70,6 +71,7 @@ namespace Netick.Transport.WebRTC
 
         private int _connectionId;
         private RTCDataChannel _dataChannel;
+        private RTCDataChannel _dataChannelSecond;
 
         private WebRTCEndPoint _endPoint = new();
         private bool _isTimedOut;
@@ -82,6 +84,9 @@ namespace Netick.Transport.WebRTC
         public override bool IsTimedOut => _isTimedOut;
         public override bool IsConnectionOpen => _dataChannel != null && _dataChannel.ReadyState == RTCDataChannelState.Open;
         public override IEndPoint EndPoint => _endPoint;
+
+        private const string LabelSendChannel = "sendChannel";
+        private const string LabelSendChannelReliable = "sendChannelReliable";
 
         public RTCDataChannelState GetDataChannelState()
         {
@@ -150,6 +155,7 @@ namespace Netick.Transport.WebRTC
         {
             _peerConnection?.Close();
             _dataChannel?.Close();
+            _dataChannelSecond?.Close();
         }
 
         private void ConstructRTCPeerConnection()
@@ -300,14 +306,37 @@ namespace Netick.Transport.WebRTC
             rtcDataChannelConfig.maxRetransmits = 0;
             rtcDataChannelConfig.ordered = false;
 
+            RTCDataChannelInit rtcDataChannelReliableConfig = new RTCDataChannelInit();
+
             ConstructRTCPeerConnection();
-            _dataChannel = _peerConnection.CreateDataChannel("sendData", rtcDataChannelConfig);
-            _dataChannel.OnClose = OnChannelClose;
-            _dataChannel.OnOpen = OnChannelOpen;
-            _dataChannel.OnMessage = OnMessage;
+            _dataChannel = _peerConnection.CreateDataChannel(LabelSendChannel, rtcDataChannelConfig);
+            _dataChannel.OnClose = OnDataChannelClose;
+            _dataChannel.OnOpen = OnDataChannelOpen;
+            _dataChannel.OnMessage = OnDataChannelMessage;
+
+            _dataChannelSecond = _peerConnection.CreateDataChannel(LabelSendChannelReliable, rtcDataChannelReliableConfig);
+            _dataChannelSecond.OnClose = OnDataChannelReliableClose;
+            _dataChannelSecond.OnOpen = OnDataChannelReliableOpen;
+            _dataChannelSecond.OnMessage = OnDataChannelReliableMessage;
 
             Log("Creating Offer...");
             _opCreateOffer = _peerConnection.CreateOffer();
+        }
+
+        private void OnDataChannelReliableOpen()
+        {
+            Log("OnDataChannelReliableOpen");
+        }
+
+        private void OnDataChannelReliableMessage(byte[] bytes)
+        {
+            Log("OnDataChannelReliableMessage");
+            BroadcastOnMessage(bytes);
+        }
+
+        private void OnDataChannelReliableClose()
+        {
+            Log("OnDataChannelReliableClose");
         }
 
         public override void OnReceivedOfferFromClient(string offer)
@@ -364,39 +393,60 @@ namespace Netick.Transport.WebRTC
             return rtcIceServers;
         }
 
-        private void OnChannelOpen()
+        private void OnDataChannelOpen()
         {
+            Log("OnDataChannelOpen");
             SDPParser.ParseSDP(_peerConnection.RemoteDescription.sdp, out string ip, out int port);
 
             _endPoint.Init(ip, port);
             _timerLocalTimeout = FlexTimer.None;
         }
 
-        private void OnChannelClose()
+        private void OnDataChannelClose()
         {
             BroadcastOnConnectionClosed();
         }
 
-        private void OnDataChannel(RTCDataChannel dataChannel)
+        private void OnDataChannelReliableClosed()
         {
-            _dataChannel = dataChannel;
-            _dataChannel.OnMessage = OnMessage;
-            _dataChannel.OnClose = OnChannelClose;
 
-            SDPParser.ParseSDP(_peerConnection.RemoteDescription.sdp, out string ip, out int port);
-
-            _endPoint.Init(ip, port);
         }
 
-
-        private void OnMessage(byte[] bytes)
+        private void OnDataChannel(RTCDataChannel dataChannel)
         {
+            if (dataChannel.Label == LabelSendChannel)
+            {
+                _dataChannel = dataChannel;
+                _dataChannel.OnMessage = OnDataChannelMessage;
+                _dataChannel.OnClose = OnDataChannelClose;
+
+                SDPParser.ParseSDP(_peerConnection.RemoteDescription.sdp, out string ip, out int port);
+
+                _endPoint.Init(ip, port);
+            }
+            else if (dataChannel.Label == LabelSendChannelReliable)
+            {
+                _dataChannelSecond = dataChannel;
+                _dataChannelSecond.OnMessage = OnDataChannelReliableMessage;
+                _dataChannelSecond.OnClose = OnDataChannelReliableClosed;
+            }
+        }
+
+        private void OnDataChannelMessage(byte[] bytes)
+        {
+            Log("OnDataChannelMessage");
             BroadcastOnMessage(bytes);
         }
 
-        public override void Send(IntPtr ptr, int length)
+        public override void Send(IntPtr ptr, int length, bool isReliable)
         {
-            _dataChannel.Send(ptr, length);
+            if (!isReliable)
+            {
+                _dataChannel.Send(ptr, length);
+                return;
+            }
+
+            _dataChannelSecond.Send(ptr, length);
         }
 
         private void PollIceCandidate()

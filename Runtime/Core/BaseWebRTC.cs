@@ -1,4 +1,3 @@
-using Netick;
 using System;
 
 namespace Netick.Transport.WebRTC
@@ -13,7 +12,7 @@ namespace Netick.Transport.WebRTC
 
         public abstract void SetConfig(UserRTCConfig userRTCConfig, WebSocketSignalingConfig webSocketSignalingConfig);
 
-        public abstract void Send(IntPtr ptr, int length);
+        public abstract void Send(IntPtr ptr, int length, bool isReliable);
 
         public abstract void Connect(string address, int port);
 

@@ -347,7 +347,7 @@ namespace Netick.Transport.WebRTC
             return rtcIceServers;
         }
 
-        public override void Send(IntPtr ptr, int length)
+        public override void Send(IntPtr ptr, int length, bool isReliable)
         {
             Browser.WebRTC_DataChannelSend(ptr, length);
         }

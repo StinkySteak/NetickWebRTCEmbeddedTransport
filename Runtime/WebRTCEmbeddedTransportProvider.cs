@@ -64,17 +64,18 @@ namespace Netick.Transport
 
             public override void Send(IntPtr ptr, int length)
             {
-                Peer.Send(ptr, length);
+                Peer.Send(ptr, length, isReliable: false);
             }
 
             public override void SendUserData(IntPtr ptr, int length, TransportDeliveryMethod transportDeliveryMethod)
             {
                 if (transportDeliveryMethod == TransportDeliveryMethod.Reliable)
                 {
-                    Debug.LogError($"[{nameof(WebRTCConnection)}]: Reliable is unsupported at the moment");
+                    Peer.Send(ptr, length, isReliable: true);
+                    return;
                 }
 
-                Peer.Send(ptr, length);
+                Peer.Send(ptr, length, isReliable: false);
             }
         }
 
