@@ -321,6 +321,7 @@ namespace Netick.Transport.WebRTC
             rtcDataChannelConfig.ordered = false;
 
             Browser.WebRTC_CreateDataChannel(rtcDataChannelConfig);
+            Browser.WebRTC_CreateDataChannelReliable();
             Browser.WebRTC_SetCallbackOnMessage(OnMessage);
 
             Browser.WebRTC_CreateOffer();
@@ -358,7 +359,13 @@ namespace Netick.Transport.WebRTC
 
         public override void Send(IntPtr ptr, int length, bool isReliable)
         {
-            Browser.WebRTC_DataChannelSend(ptr, length);
+            if (!isReliable)
+            {
+                Browser.WebRTC_DataChannelSend(ptr, length);
+                return;
+            }
+
+            Browser.WebRTC_DataChannelReliableSend(ptr, length);
         }
 
         public override void CloseConnection()

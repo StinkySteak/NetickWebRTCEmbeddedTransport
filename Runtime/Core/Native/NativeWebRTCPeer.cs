@@ -34,7 +34,7 @@ namespace Netick.Transport.WebRTC
 
         public override void PollUpdate() { }
 
-        public override void Send(IntPtr ptr, int length) { }
+        public override void Send(IntPtr ptr, int length, bool isReliable) { }
 
         public override void SetConfig(UserRTCConfig userConfig, WebSocketSignalingConfig webSocketSignalingConfig) { }
 

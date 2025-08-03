@@ -262,13 +262,9 @@ mergeInto(LibraryManager.library, {
         };
     },
 
-    WebRTC_Unsafe_CreateDataChannelReliable: function (configJson) {
+    WebRTC_Unsafe_CreateDataChannelReliable: function () {
 
-        const json = UTF8ToString(configJson);
-
-        let config = JSON.parse(json);
-
-        this.dataChannelReliable = this.peerConnection.createDataChannel("sendChannelReliable", config);
+        this.dataChannelReliable = this.peerConnection.createDataChannel("sendChannelReliable");
 
         this.dataChannelReliable.onopen = (event) => {
             if (this.onDataChannelReliableOpenCallback)
@@ -403,10 +399,10 @@ mergeInto(LibraryManager.library, {
         this.onIceCandidateGathertingStateCallback = callback;
     },
 
-    WebRTC_SetCallbackOnChannelOpen: function (callback) {
+    WebRTC_SetCallbackOnDataChannelOpen: function (callback) {
         this.onDataChannelOpenCallback = callback;
     },
-    WebRTC_SetCallbackOnReliableChannelOpen: function (callback) {
+    WebRTC_SetCallbackOnDataChannelReliableOpen: function (callback) {
         this.onDataChannelReliableOpenCallback = callback;
     },
 

@@ -188,15 +188,13 @@ namespace StinkySteak.WebRealtimeCommunication
         [DllImport("__Internal")]
         public static extern void WebRTC_Unsafe_CreateDataChannel(string configJson);
 
-        public static void WebRTC_CreateDataChannelReliable(BrowserRTCDataChannelInit dataChannelConfig)
+        public static void WebRTC_CreateDataChannelReliable()
         {
-            string json = JsonConvert.SerializeObject(dataChannelConfig);
-
-            WebRTC_Unsafe_CreateDataChannelReliable(json);
+            WebRTC_Unsafe_CreateDataChannelReliable();
         }
 
         [DllImport("__Internal")]
-        public static extern void WebRTC_Unsafe_CreateDataChannelReliable(string configJson);
+        public static extern void WebRTC_Unsafe_CreateDataChannelReliable();
 
         [DllImport("__Internal")]
         public static extern bool WebRTC_IsConnectionOpen();
@@ -305,6 +303,7 @@ namespace StinkySteak.WebRealtimeCommunication
         }
 
         public static void WebRTC_Unsafe_CreateDataChannel(string configJson) { }
+        public static void WebRTC_Unsafe_CreateDataChannelReliable() { }
         public static bool WebRTC_IsConnectionOpen() { return false; }
         public static void WebRTC_DataChannelSend(IntPtr ptr, int length) { }
         public static void WebRTC_SetCallbackOnMessage(OnMessageCallback callback) { }
