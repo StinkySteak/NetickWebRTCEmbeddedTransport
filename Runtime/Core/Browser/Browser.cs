@@ -188,11 +188,24 @@ namespace StinkySteak.WebRealtimeCommunication
         [DllImport("__Internal")]
         public static extern void WebRTC_Unsafe_CreateDataChannel(string configJson);
 
+        public static void WebRTC_CreateDataChannelReliable(BrowserRTCDataChannelInit dataChannelConfig)
+        {
+            string json = JsonConvert.SerializeObject(dataChannelConfig);
+
+            WebRTC_Unsafe_CreateDataChannelReliable(json);
+        }
+
+        [DllImport("__Internal")]
+        public static extern void WebRTC_Unsafe_CreateDataChannelReliable(string configJson);
+
         [DllImport("__Internal")]
         public static extern bool WebRTC_IsConnectionOpen();
 
         [DllImport("__Internal")]
         public static extern void WebRTC_DataChannelSend(IntPtr ptr, int length);
+
+        [DllImport("__Internal")]
+        public static extern void WebRTC_DataChannelReliableSend(IntPtr ptr, int length);
 
         [DllImport("__Internal")]
         public static extern void WebRTC_SetCallbackOnMessage(OnMessageCallback callback);
@@ -201,13 +214,16 @@ namespace StinkySteak.WebRealtimeCommunication
         public static extern void WebRTC_SetCallbackOnIceConnectionStateChange(OnIceConnectionStateChange callback);
 
         [DllImport("__Internal")]
-        public static extern void WebRTC_SetCallbackOnDataChannel(OnDataChannel calback);
+        public static extern void WebRTC_SetCallbackOnDataChannelCreated(OnDataChannelCreated calback);
 
         [DllImport("__Internal")]
         public static extern void WebRTC_SetCallbackOnIceCandidate(OnIceCandidate calback);
         
         [DllImport("__Internal")]
-        public static extern void WebRTC_SetCallbackOnChannelOpen(OnChannelOpen calback);
+        public static extern void WebRTC_SetCallbackOnDataChannelOpen(OnDataChannelOpen calback);
+        
+        [DllImport("__Internal")]
+        public static extern void WebRTC_SetCallbackOnDataChannelReliableOpen(OnDataChannelOpen calback);
 
         [DllImport("__Internal")]
         public static extern void WebRTC_SetCallbackOnIceCandidateGatheringState(OnIceCandidateGatheringState calback);
@@ -293,9 +309,11 @@ namespace StinkySteak.WebRealtimeCommunication
         public static void WebRTC_DataChannelSend(IntPtr ptr, int length) { }
         public static void WebRTC_SetCallbackOnMessage(OnMessageCallback callback) { }
         public static void WebRTC_SetCallbackOnIceConnectionStateChange(OnIceConnectionStateChange callback) { }
-        public static void WebRTC_SetCallbackOnDataChannel(OnDataChannel callback) { }
+        public static void WebRTC_SetCallbackOnDataChannelCreated(OnDataChannelCreated callback) { }
         public static void WebRTC_SetCallbackOnIceCandidate(OnIceCandidate callback) { }
-        public static void WebRTC_SetCallbackOnChannelOpen(OnChannelOpen callback) { }
+        public static void WebRTC_SetCallbackOnDataChannelOpen(OnDataChannelOpen callback) { }
+        public static void WebRTC_SetCallbackOnDataChannelReliableOpen(OnDataChannelOpen callback) { }
+        public static void WebRTC_SetCallbackOnDataChanneReliablelOpen(OnDataChannelReliableOpen callback) { }
         public static void WebRTC_SetCallbackOnIceCandidateGatheringState(OnIceCandidateGatheringState callback) { }
         public static bool WebRTC_GetIsPeerConnectionCreated() { return false; }
         public static bool WebRTC_Reset() { return false; }
@@ -305,9 +323,10 @@ namespace StinkySteak.WebRealtimeCommunication
 
     public delegate void OnMessageCallback(IntPtr ptr, int length);
     public delegate void OnIceConnectionStateChange();
-    public delegate void OnDataChannel();
+    public delegate void OnDataChannelCreated();
     public delegate void OnIceCandidate();
-    public delegate void OnChannelOpen();
+    public delegate void OnDataChannelOpen();
+    public delegate void OnDataChannelReliableOpen();
     public delegate void OnIceCandidateGatheringState(int state);
 
     public enum BrowserRTCIceGatheringState : int

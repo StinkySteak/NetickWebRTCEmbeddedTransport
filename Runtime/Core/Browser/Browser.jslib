@@ -2,6 +2,7 @@ mergeInto(LibraryManager.library, {
 
     peerConnection: null,
     dataChannel: null,
+    dataChannelReliable: null,
 
     offerJson: null,
     answerJson: null,
@@ -19,11 +20,16 @@ mergeInto(LibraryManager.library, {
     opSetRemoteDescriptionDone: null,
 
     onMessageCallback: null,
+
     onIceConnectionStateChangeCallback: null,
-    onDataChannelCallback: null,
     onIceCandidateCallback: null,
     onIceCandidateGathertingStateCallback: null,
+
     onDataChannelOpenCallback: null,
+    onDataChannelCreatedCallback: null,
+
+    onDataChannelReliableOpenCallback: null,
+    onDataChannelReliableCreatedCallback: null,
 
 
     WebRTC_Unsafe_CreateRTCPeerConnection: function (configJson) {
@@ -68,39 +74,70 @@ mergeInto(LibraryManager.library, {
                 Module.dynCall_v(this.onIceConnectionStateChangeCallback);
         };
 
-        console.log("subscribe onDataChannel");
-
         this.peerConnection.ondatachannel = (event) => {
 
-            if (this.onDataChannelCallback) {
-                console.log("Module.dynCall_v(this.onDataChannelCallback);");
-                Module.dynCall_v(this.onDataChannelCallback);
-            }
+            if (event.channel.label == "sendChannel") {
+                this.dataChannel = event.channel;
 
-            this.dataChannel = event.channel;
-
-            this.dataChannel.onopen = (event) => {
-                if (this.onDataChannelOpenCallback)
-                    Module.dynCall_v(this.onDataChannelOpenCallback);
-            };
-
-            this.dataChannel.onmessage = (event) => {
-                if (event.data instanceof ArrayBuffer) {
-                    let array = new Uint8Array(event.data);
-                    let arrayLength = array.length;
-
-                    var ptr = Module._malloc(arrayLength);
-
-                    let dataBuffer = new Uint8Array(HEAPU8.buffer, ptr, arrayLength);
-
-                    Module.HEAPU8.set(dataBuffer, ptr);
-
-                    dataBuffer.set(array);
-
-                    if (this.onMessageCallback)
-                        Module.dynCall_vii(this.onMessageCallback, ptr, dataBuffer.length);
+                if (this.onDataChannelCreatedCallback) {
+                    Module.dynCall_v(this.onDataChannelCreatedCallback);
                 }
-            };
+
+
+                this.dataChannel.onopen = (event) => {
+                    if (this.onDataChannelOpenCallback)
+                        Module.dynCall_v(this.onDataChannelOpenCallback);
+                };
+
+                this.dataChannel.onmessage = (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        let array = new Uint8Array(event.data);
+                        let arrayLength = array.length;
+
+                        var ptr = Module._malloc(arrayLength);
+
+                        let dataBuffer = new Uint8Array(HEAPU8.buffer, ptr, arrayLength);
+
+                        Module.HEAPU8.set(dataBuffer, ptr);
+
+                        dataBuffer.set(array);
+
+                        if (this.onMessageCallback)
+                            Module.dynCall_vii(this.onMessageCallback, ptr, dataBuffer.length);
+                    }
+                };
+            }
+            else if (event.channel.label == "sendChannelReliable") {
+                this.dataChannelReliable = event.channel;
+
+                if (this.onDataChannelReliableCreatedCallback) {
+                    Module.dynCall_v(this.onDataChannelReliableCreatedCallback);
+                }
+
+
+                this.dataChannelReliable.onopen = (event) => {
+                    if (this.onDataChannelReliableOpenCallback)
+                        Module.dynCall_v(this.onDataChannelReliableOpenCallback);
+                };
+
+                this.dataChannelReliable.onmessage = (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        let array = new Uint8Array(event.data);
+                        let arrayLength = array.length;
+
+                        var ptr = Module._malloc(arrayLength);
+
+                        let dataBuffer = new Uint8Array(HEAPU8.buffer, ptr, arrayLength);
+
+                        Module.HEAPU8.set(dataBuffer, ptr);
+
+                        dataBuffer.set(array);
+
+                        if (this.onMessageCallback)
+                            Module.dynCall_vii(this.onMessageCallback, ptr, dataBuffer.length);
+                    }
+                };
+            }
         };
     },
 
@@ -145,6 +182,12 @@ mergeInto(LibraryManager.library, {
         const byteArray = new Uint8Array(Module.HEAPU8.buffer, dataPointer, dataLength);
 
         this.dataChannel.send(byteArray);
+    },
+
+    WebRTC_DataChannelReliableSend: function (dataPointer, dataLength) {
+        const byteArray = new Uint8Array(Module.HEAPU8.buffer, dataPointer, dataLength);
+
+        this.dataChannelReliable.send(byteArray);
     },
 
     WebRTC_GetOpCreateOfferIsDone: function () {
@@ -193,14 +236,46 @@ mergeInto(LibraryManager.library, {
 
         let config = JSON.parse(json);
 
-        this.dataChannel = this.peerConnection.createDataChannel("sendData", config);
+        this.dataChannel = this.peerConnection.createDataChannel("sendChannel", config);
 
         this.dataChannel.onopen = (event) => {
-                if (this.onDataChannelOpenCallback)
-                    Module.dynCall_v(this.onDataChannelOpenCallback);
+            if (this.onDataChannelOpenCallback)
+                Module.dynCall_v(this.onDataChannelOpenCallback);
         };
 
         this.dataChannel.onmessage = (event) => {
+            if (event.data instanceof ArrayBuffer) {
+                let array = new Uint8Array(event.data);
+                let arrayLength = array.length;
+
+                var ptr = Module._malloc(arrayLength);
+
+                let dataBuffer = new Uint8Array(HEAPU8.buffer, ptr, arrayLength);
+
+                Module.HEAPU8.set(dataBuffer, ptr);
+
+                dataBuffer.set(array);
+
+                if (this.onMessageCallback)
+                    Module.dynCall_vii(this.onMessageCallback, ptr, dataBuffer.length);
+            }
+        };
+    },
+
+    WebRTC_Unsafe_CreateDataChannelReliable: function (configJson) {
+
+        const json = UTF8ToString(configJson);
+
+        let config = JSON.parse(json);
+
+        this.dataChannelReliable = this.peerConnection.createDataChannel("sendChannelReliable", config);
+
+        this.dataChannelReliable.onopen = (event) => {
+            if (this.onDataChannelReliableOpenCallback)
+                Module.dynCall_v(this.onDataChannelReliableOpenCallback);
+        };
+
+        this.dataChannelReliable.onmessage = (event) => {
             if (event.data instanceof ArrayBuffer) {
                 let array = new Uint8Array(event.data);
                 let arrayLength = array.length;
@@ -312,8 +387,12 @@ mergeInto(LibraryManager.library, {
         this.onIceConnectionStateChangeCallback = callback;
     },
 
-    WebRTC_SetCallbackOnDataChannel: function (callback) {
-        this.onDataChannelCallback = callback;
+    WebRTC_SetCallbackOnDataChannelCreated: function (callback) {
+        this.onDataChannelCreatedCallback = callback;
+    },
+
+    WebRTC_SetCallbackOnDataReliableChannelCreated: function (callback) {
+        this.onDataChannelReliableCreatedCallback = callback;
     },
 
     WebRTC_SetCallbackOnIceCandidate: function (callback) {
@@ -327,20 +406,26 @@ mergeInto(LibraryManager.library, {
     WebRTC_SetCallbackOnChannelOpen: function (callback) {
         this.onDataChannelOpenCallback = callback;
     },
+    WebRTC_SetCallbackOnReliableChannelOpen: function (callback) {
+        this.onDataChannelReliableOpenCallback = callback;
+    },
 
     WebRTC_CloseConnection: function () {
         if (this.dataChannel)
             this.dataChannel.close();
 
+        if (this.dataChannelReliable)
+            this.dataChannelReliable.close();
+
         if (this.peerConnection)
-           this.peerConnection.close();
+            this.peerConnection.close();
     },
 
     WebRTC_GetIsPeerConnectionCreated: function () {
         return this.peerConnection != null;
     },
 
-     WebRTC_Reset: function () {
+    WebRTC_Reset: function () {
         this.peerConnection = null;
         this.dataChannel = null;
 
@@ -361,10 +446,14 @@ mergeInto(LibraryManager.library, {
 
         this.onMessageCallback = null;
         this.onIceConnectionStateChangeCallback = null;
-        this.onDataChannelCallback = null;
         this.onIceCandidateCallback = null;
         this.onIceCandidateGathertingStateCallback = null;
+
+        this.onDataChannelCreatedCallback = null;
         this.onDataChannelOpenCallback = null;
+
+        this.onDataChannelReliableCreatedCallback = null;
+        this.onDataChannelReliableOpenCallback = null;
     },
 
     WebRTC_Unsafe_GetGatheringState: function () {

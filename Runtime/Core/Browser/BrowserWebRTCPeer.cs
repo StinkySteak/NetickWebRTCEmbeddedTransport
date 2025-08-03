@@ -52,11 +52,14 @@ namespace Netick.Transport.WebRTC
             BrowserRTCConfiguration config = GetSelectedSdpSemantics();
 
             Browser.WebRTC_CreateRTCPeerConnection(config);
+
             Browser.WebRTC_SetCallbackOnIceCandidate(OnIceCandidate);
             Browser.WebRTC_SetCallbackOnIceConnectionStateChange(OnIceConnectionChanged);
-            Browser.WebRTC_SetCallbackOnDataChannel(OnDataChannel);
+            Browser.WebRTC_SetCallbackOnDataChannelCreated(OnDataChannelCreated);
             Browser.WebRTC_SetCallbackOnIceCandidateGatheringState(OnIceGatheringStateChanged);
-            Browser.WebRTC_SetCallbackOnChannelOpen(OnChannelOpen);
+
+            Browser.WebRTC_SetCallbackOnDataChannelOpen(OnDataChannelOpen);
+            Browser.WebRTC_SetCallbackOnDataChannelReliableOpen(OnDataChannelReliableOpen);
         }
 
         [MonoPInvokeCallback(typeof(OnIceCandidate))]
@@ -77,8 +80,8 @@ namespace Netick.Transport.WebRTC
             BrowserRTCIceGatheringState rtcState = (BrowserRTCIceGatheringState)state;
         }
 
-        [MonoPInvokeCallback(typeof(OnChannelOpen))]
-        private static void OnChannelOpen()
+        [MonoPInvokeCallback(typeof(OnDataChannelOpen))]
+        private static void OnDataChannelOpen()
         {
             Instance._timerLocalTimeout = FlexTimer.None;
 
@@ -89,8 +92,14 @@ namespace Netick.Transport.WebRTC
             Instance._endPoint.Init(ip, port);
         }
 
-        [MonoPInvokeCallback(typeof(OnDataChannel))]
-        private static void OnDataChannel()
+        [MonoPInvokeCallback(typeof(OnDataChannelReliableOpen))]
+        private static void OnDataChannelReliableOpen()
+        {
+
+        }
+
+        [MonoPInvokeCallback(typeof(OnDataChannelCreated))]
+        private static void OnDataChannelCreated()
         {
             string remoteDescription = Browser.WebRTC_GetRemoteDescription();
 

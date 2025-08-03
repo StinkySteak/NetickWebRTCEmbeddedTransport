@@ -165,7 +165,7 @@ namespace Netick.Transport.WebRTC
             _peerConnection.OnIceCandidate = OnIceCandidate;
             _peerConnection.OnIceConnectionChange = OnIceConnectionChange;
             _peerConnection.OnIceGatheringStateChange = OnIceGatheringStateChanged;
-            _peerConnection.OnDataChannel = OnDataChannel;
+            _peerConnection.OnDataChannel = OnDataChannelCreated;
         }
 
         private void Log(string msg)
@@ -412,7 +412,7 @@ namespace Netick.Transport.WebRTC
 
         }
 
-        private void OnDataChannel(RTCDataChannel dataChannel)
+        private void OnDataChannelCreated(RTCDataChannel dataChannel)
         {
             if (dataChannel.Label == LabelSendChannel)
             {
