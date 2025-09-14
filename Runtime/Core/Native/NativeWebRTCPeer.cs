@@ -13,6 +13,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using StinkySteak.Timer;
 using UnityEngine.Rendering;
+using StinkySteak.WebRealtimeCommunication;
 
 namespace Netick.Transport.WebRTC
 {
@@ -339,7 +340,7 @@ namespace Netick.Transport.WebRTC
             Log("OnDataChannelReliableClose");
         }
 
-        public override void OnReceivedOfferFromClient(string offer)
+        public override void OnReceivedOfferFromClient(WebRTCSessionDescription offer)
         {
             Log("Getting an offer from a client. Applying offer as remote description...");
 

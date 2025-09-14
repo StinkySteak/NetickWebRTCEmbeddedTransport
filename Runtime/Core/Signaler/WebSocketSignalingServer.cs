@@ -1,8 +1,9 @@
+using JamesFrowen.SimpleWeb;
+using Newtonsoft.Json;
+using StinkySteak.WebRealtimeCommunication;
 using System;
 using System.Security.Authentication;
 using System.Text;
-using JamesFrowen.SimpleWeb;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Netick.Transport.WebRTC
@@ -12,7 +13,7 @@ namespace Netick.Transport.WebRTC
         private SimpleWebServer _server;
 
         public event Action<int> OnClientDisconnected;
-        public event Action<int, string> OnClientOffered;
+        public event Action<int, WebRTCSessionDescription> OnClientOffered;
 
         private WebSocketServerSignalingConfig _config;
 
@@ -65,10 +66,10 @@ namespace Netick.Transport.WebRTC
             OnClientDisconnected?.Invoke(clientId);
         }
 
-        public void SendAnswerToClient(int clientId, string answer)
+        public void SendAnswerToClient(int clientId, WebRTCSessionDescription answer)
         {
             SignalingMessage message = new();
-            message.Content = answer;
+            message.SessionDescription = answer;
             message.Type = SignalingMessageType.Answer;
             message.To = clientId;
 
@@ -86,7 +87,7 @@ namespace Netick.Transport.WebRTC
 
             if (message.Type == SignalingMessageType.Offer)
             {
-                string offer = message.Content;
+                WebRTCSessionDescription offer = message.SessionDescription;
 
                 OnClientOffered?.Invoke(clientId, offer);
             }

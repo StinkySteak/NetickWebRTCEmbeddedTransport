@@ -1,6 +1,7 @@
-using System;
 using JamesFrowen.SimpleWeb;
 using Newtonsoft.Json;
+using StinkySteak.WebRealtimeCommunication;
+using System;
 using UnityEngine;
 
 namespace Netick.Transport.WebRTC
@@ -75,7 +76,7 @@ namespace Netick.Transport.WebRTC
             OnConnectedToServer?.Invoke();
         }
 
-        public void SendOffer(string offer)
+        public void SendOffer(WebRTCSessionDescription offer)
         {
             SignalingMessage message = new();
             message.Content = offer;

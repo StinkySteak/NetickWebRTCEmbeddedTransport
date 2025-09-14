@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using AOT;
 using StinkySteak.Timer;
 using StinkySteak.WebRealtimeCommunication;
@@ -8,18 +9,19 @@ namespace Netick.Transport.WebRTC
 {
     public class BrowserWebRTCPeer : BaseWebRTCPeer
     {
-        private static BrowserWebRTCPeer Instance { get; set; }
+        private static Dictionary<int, BrowserWebRTCPeer> _peers = new Dictionary<int, BrowserWebRTCPeer>();
 
         private WebSocketSignalingServer _signalingServiceServer;
         private WebSocketClientSignalingService _signalingServiceClient;
         private WebRTCEndPoint _endPoint = new();
 
         private int _connectionId;
-        private string _offer;
-        private string _answer;
+        private WebRTCSessionDescription _offer;
+        private WebRTCSessionDescription _answer;
         private RunMode _peerMode;
         private bool _hasSentIceGatheringComplete;
         private bool _isTimedOut;
+        private int _peerIndex;
 
         private FlexTimer _timerLocalTimeout;
         private FlexTimer _timerIceTrickling;
@@ -28,13 +30,11 @@ namespace Netick.Transport.WebRTC
         private WebSocketSignalingConfig _webSocketSignalingConfig;
 
         public override IEndPoint EndPoint => _endPoint;
-        public override bool IsConnectionOpen => Browser.WebRTC_IsConnectionOpen();
+        public override bool IsConnectionOpen => Browser.WebRTC_IsConnectionOpen(_peerIndex);
         public override bool IsTimedOut => _isTimedOut;
 
         public override void Start(RunMode runMode)
         {
-            Instance = this;
-
             _peerMode = runMode;
 
             if (_peerMode == RunMode.Server)
@@ -53,65 +53,66 @@ namespace Netick.Transport.WebRTC
 
             Browser.WebRTC_CreateRTCPeerConnection(config);
 
-            Browser.WebRTC_SetCallbackOnIceCandidate(OnIceCandidate);
-            Browser.WebRTC_SetCallbackOnIceConnectionStateChange(OnIceConnectionChanged);
-            Browser.WebRTC_SetCallbackOnDataChannelCreated(OnDataChannelCreated);
-            Browser.WebRTC_SetCallbackOnIceCandidateGatheringState(OnIceGatheringStateChanged);
+            Browser.WebRTC_SetCallbackOnIceCandidate(_peerIndex, OnIceCandidate);
+            Browser.WebRTC_SetCallbackOnIceConnectionStateChange(_peerIndex, OnIceConnectionChanged);
+            Browser.WebRTC_SetCallbackOnDataChannelCreated(_peerIndex, OnDataChannelCreated);
+            Browser.WebRTC_SetCallbackOnIceCandidateGatheringState(_peerIndex, OnIceGatheringStateChanged);
 
-            Browser.WebRTC_SetCallbackOnDataChannelOpen(OnDataChannelOpen);
-            Browser.WebRTC_SetCallbackOnDataChannelReliableOpen(OnDataChannelReliableOpen);
+            Browser.WebRTC_SetCallbackOnDataChannelOpen(_peerIndex, OnDataChannelOpen);
+            Browser.WebRTC_SetCallbackOnDataChannelReliableOpen(_peerIndex, OnDataChannelReliableOpen);
         }
 
         [MonoPInvokeCallback(typeof(OnIceCandidate))]
-        private static void OnIceCandidate()
+        private static void OnIceCandidate(int index)
         {
-            Instance.Log("OnIceCandidate");
         }
 
         [MonoPInvokeCallback(typeof(OnIceConnectionStateChange))]
-        private static void OnIceConnectionChanged()
+        private static void OnIceConnectionChanged(int index)
         {
-            Instance.Log("OnIceConnectionChanged");
         }
 
         [MonoPInvokeCallback(typeof(OnIceCandidateGatheringState))]
-        private static void OnIceGatheringStateChanged(int state)
+        private static void OnIceGatheringStateChanged(int index, int state)
         {
             BrowserRTCIceGatheringState rtcState = (BrowserRTCIceGatheringState)state;
         }
 
         [MonoPInvokeCallback(typeof(OnDataChannelOpen))]
-        private static void OnDataChannelOpen()
+        private static void OnDataChannelOpen(int index)
         {
-            Instance._timerLocalTimeout = FlexTimer.None;
+            BrowserWebRTCPeer peer = _peers[index];
+            peer._timerLocalTimeout = FlexTimer.None;
 
-            string remoteDescription = Browser.WebRTC_GetRemoteDescription();
+            string remoteDescription = Browser.WebRTC_GetRemoteDescriptionJson(index);
 
             SDPParser.ParseSDP(remoteDescription, out string ip, out int port);
 
-            Instance._endPoint.Init(ip, port);
+            peer._endPoint.Init(ip, port);
         }
 
         [MonoPInvokeCallback(typeof(OnDataChannelReliableOpen))]
-        private static void OnDataChannelReliableOpen()
+        private static void OnDataChannelReliableOpen(int index)
         {
 
         }
 
         [MonoPInvokeCallback(typeof(OnDataChannelCreated))]
-        private static void OnDataChannelCreated()
+        private static void OnDataChannelCreated(int index)
         {
-            string remoteDescription = Browser.WebRTC_GetRemoteDescription();
+            BrowserWebRTCPeer peer = _peers[index];
+            string remoteDescription = Browser.WebRTC_GetRemoteDescriptionJson(index);
 
             SDPParser.ParseSDP(remoteDescription, out string ip, out int port);
 
-            Instance._endPoint.Init(ip, port);
+            peer._endPoint.Init(ip, port);
         }
 
         [MonoPInvokeCallback(typeof(OnMessageCallback))]
-        private static void OnMessage(IntPtr ptr, int length)
+        private static void OnMessage(int index, IntPtr ptr, int length)
         {
-            Instance.BroadcastOnMessageUnmanaged(ptr, length);
+            BrowserWebRTCPeer peer = _peers[index];
+            peer.BroadcastOnMessageUnmanaged(ptr, length);
         }
 
         public override void PollUpdate()
@@ -148,16 +149,16 @@ namespace Netick.Transport.WebRTC
 
         private void PollOpSetLocalAnswer()
         {
-            if (!Browser.WebRTC_HasOpSetLocalDescription()) return;
+            if (!Browser.WebRTC_HasOpSetLocalDescription(_peerIndex)) return;
 
-            if (Browser.WebRTC_IsOpSetLocalDescriptionDone())
+            if (Browser.WebRTC_IsOpSetLocalDescriptionDone(_peerIndex))
             {
                 Log("Answer has been set to local description!");
 
                 if (_userRTCConfig.IceTricklingConfig.IsManual)
                     _timerIceTrickling = FlexTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
 
-                Browser.WebRTC_DisposeOpSetLocalDescription();
+                Browser.WebRTC_DisposeOpSetLocalDescription(_peerIndex);
             }
         }
 
@@ -168,83 +169,83 @@ namespace Netick.Transport.WebRTC
 
         private void PollOpCreateAnswer()
         {
-            if (!Browser.WebRTC_HasOpCreateAnswer()) return;
+            if (!Browser.WebRTC_HasOpCreateAnswer(_peerIndex)) return;
 
-            if (Browser.WebRTC_GetOpCreateAnswerIsDone())
+            if (Browser.WebRTC_GetOpCreateAnswerIsDone(_peerIndex))
             {
                 Log("Answer is created. Setting it as local description...");
 
-                string answer = Browser.WebRTC_GetAnswer();
+                WebRTCSessionDescription answer = Browser.WebRTC_GetAnswer(_peerIndex);
 
-                Browser.WebRTC_SetLocalDescription(answer);
+                Browser.WebRTC_SetLocalDescription(_peerIndex, answer);
 
-                Browser.WebRTC_DisposeOpCreateAnswer();
+                Browser.WebRTC_DisposeOpCreateAnswer(_peerIndex);
             }
         }
 
         private void PollOpSetRemoteOffer()
         {
-            if (!Browser.WebRTC_HasOpSetRemoteDescription()) return;
+            if (!Browser.WebRTC_HasOpSetRemoteDescription(_peerIndex)) return;
 
-            if (Browser.WebRTC_IsOpSetRemoteDescriptionDone())
+            if (Browser.WebRTC_IsOpSetRemoteDescriptionDone(_peerIndex))
             {
                 Log("Offer has been set to remote description. Creating an answer...");
 
-                Browser.WebRTC_CreateAnswer();
+                Browser.WebRTC_CreateAnswer(_peerIndex);
 
-                Browser.WebRTC_DisposeOpSetRemoteDescription();
+                Browser.WebRTC_DisposeOpSetRemoteDescription(_peerIndex);
             }
         }
 
         private void PollOpSetLocalOffer()
         {
-            if (!Browser.WebRTC_HasOpSetLocalDescription()) return;
+            if (!Browser.WebRTC_HasOpSetLocalDescription(_peerIndex)) return;
 
-            if (Browser.WebRTC_IsOpSetLocalDescriptionDone())
+            if (Browser.WebRTC_IsOpSetLocalDescriptionDone(_peerIndex))
             {
                 Log("Offer has been set to local!");
 
                 if (_userRTCConfig.IceTricklingConfig.IsManual)
                     _timerIceTrickling = FlexTimer.CreateFromSeconds(_userRTCConfig.IceTricklingConfig.Duration);
 
-                Browser.WebRTC_DisposeOpSetLocalDescription();
+                Browser.WebRTC_DisposeOpSetLocalDescription(_peerIndex);
             }
         }
 
         private void PollOpSetRemoteAnswer()
         {
-            if (!Browser.WebRTC_HasOpSetRemoteDescription()) return;
+            if (!Browser.WebRTC_HasOpSetRemoteDescription(_peerIndex)) return;
 
-            if (Browser.WebRTC_IsOpSetRemoteDescriptionDone())
+            if (Browser.WebRTC_IsOpSetRemoteDescriptionDone(_peerIndex))
             {
                 Log("Answer has been set to remote description");
 
-                Browser.WebRTC_DisposeOpSetRemoteDescription();
+                Browser.WebRTC_DisposeOpSetRemoteDescription(_peerIndex);
             }
         }
 
         private void PollOpCreateOffer()
         {
-            if (!Browser.WebRTC_HasOpCreateOffer()) return;
+            if (!Browser.WebRTC_HasOpCreateOffer(_peerIndex)) return;
 
-            if (Browser.WebRTC_GetOpCreateOfferIsDone())
+            if (Browser.WebRTC_GetOpCreateOfferIsDone(_peerIndex))
             {
                 Log("Offer Created. Setting it to local...");
-                string offer = Browser.WebRTC_GetOffer();
+                WebRTCSessionDescription offer = Browser.WebRTC_GetOffer(_peerIndex);
 
-                Browser.WebRTC_SetLocalDescription(offer);
+                Browser.WebRTC_SetLocalDescription(_peerIndex, offer);
 
-                Browser.WebRTC_DisposeOpCreateOffer();
+                Browser.WebRTC_DisposeOpCreateOffer(_peerIndex);
             }
         }
 
         private void PollIceCandidate()
         {
-            if (!Browser.WebRTC_GetIsPeerConnectionCreated()) return;
+            if (!Browser.WebRTC_GetIsPeerConnectionCreated(_peerIndex)) return;
 
             if (_hasSentIceGatheringComplete) return;
 
-            if (Browser.WebRTC_GetGatheringState() == BrowserRTCIceGatheringState.Complete || _timerIceTrickling.IsExpired())
+            if (Browser.WebRTC_GetGatheringState(_peerIndex) == BrowserRTCIceGatheringState.Complete || _timerIceTrickling.IsExpired())
             {
                 _timerIceTrickling = FlexTimer.None;
                 _hasSentIceGatheringComplete = true;
@@ -252,13 +253,13 @@ namespace Netick.Transport.WebRTC
                 if (_peerMode == RunMode.Client)
                 {
                     Log("Sending offer to the server...");
-                    _offer = Browser.WebRTC_GetLocalDescription();
+                    _offer = Browser.WebRTC_GetLocalDescription(_peerIndex);
                     SendOfferToServer();
                 }
                 if (_peerMode == RunMode.Server)
                 {
                     Log("Sending answer to the client...");
-                    _answer = Browser.WebRTC_GetLocalDescription();
+                    _answer = Browser.WebRTC_GetLocalDescription(_peerIndex);
                     SendAnswerToClient();
                 }
             }
@@ -281,7 +282,7 @@ namespace Netick.Transport.WebRTC
         {
             _connectionId = clientId;
 
-            Browser.WebRTC_SetRemoteDescription(message);
+            Browser.WebRTC_SetRemoteDescription(_peerIndex, message);
         }
 
         public override void SetConfig(UserRTCConfig userRTCConfig, WebSocketSignalingConfig webSocketSignalingConfig)
@@ -320,11 +321,11 @@ namespace Netick.Transport.WebRTC
             rtcDataChannelConfig.maxRetransmits = 0;
             rtcDataChannelConfig.ordered = false;
 
-            Browser.WebRTC_CreateDataChannel(rtcDataChannelConfig);
-            Browser.WebRTC_CreateDataChannelReliable();
-            Browser.WebRTC_SetCallbackOnMessage(OnMessage);
+            Browser.WebRTC_CreateDataChannel(_peerIndex, rtcDataChannelConfig);
+            Browser.WebRTC_CreateDataChannelReliable(_peerIndex);
+            Browser.WebRTC_SetCallbackOnMessage(_peerIndex, OnMessage);
 
-            Browser.WebRTC_CreateOffer();
+            Browser.WebRTC_CreateOffer(_peerIndex);
         }
 
         private BrowserRTCConfiguration GetSelectedSdpSemantics()
@@ -361,17 +362,17 @@ namespace Netick.Transport.WebRTC
         {
             if (!isReliable)
             {
-                Browser.WebRTC_DataChannelSend(ptr, length);
+                Browser.WebRTC_DataChannelSend(_peerIndex, ptr, length);
                 return;
             }
 
-            Browser.WebRTC_DataChannelReliableSend(ptr, length);
+            Browser.WebRTC_DataChannelReliableSend(_peerIndex, ptr, length);
         }
 
         public override void CloseConnection()
         {
-            Browser.WebRTC_CloseConnection();
-            Browser.WebRTC_Reset();
+            Browser.WebRTC_CloseConnection(_peerIndex);
+            Browser.WebRTC_Reset(_peerIndex);
         }
 
         public override void SetSignalingServer(WebSocketSignalingServer signalingServer)

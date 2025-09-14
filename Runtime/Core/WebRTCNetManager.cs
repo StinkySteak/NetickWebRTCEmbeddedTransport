@@ -1,3 +1,4 @@
+using StinkySteak.WebRealtimeCommunication;
 using System;
 using System.Collections.Generic;
 
@@ -123,7 +124,7 @@ namespace Netick.Transport.WebRTC
             peer.CloseConnection();
         }
 
-        private void OnClientOffered(int clientId, string offer)
+        private void OnClientOffered(int clientId, WebRTCSessionDescription offer)
         {
             NativeWebRTCPeer candidatePeer = new NativeWebRTCPeer();
 
