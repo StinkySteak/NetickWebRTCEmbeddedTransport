@@ -304,8 +304,10 @@ namespace StinkySteak.WebRealtimeCommunication
 
         public static void WebRTC_Unsafe_CreateDataChannel(string configJson) { }
         public static void WebRTC_Unsafe_CreateDataChannelReliable() { }
+        public static void WebRTC_CreateDataChannelReliable() { }
         public static bool WebRTC_IsConnectionOpen() { return false; }
         public static void WebRTC_DataChannelSend(IntPtr ptr, int length) { }
+        public static void WebRTC_DataChannelReliableSend(IntPtr ptr, int length) { }
         public static void WebRTC_SetCallbackOnMessage(OnMessageCallback callback) { }
         public static void WebRTC_SetCallbackOnIceConnectionStateChange(OnIceConnectionStateChange callback) { }
         public static void WebRTC_SetCallbackOnDataChannelCreated(OnDataChannelCreated callback) { }
